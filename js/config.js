@@ -27,6 +27,7 @@ export const CONFIG = {
     hard:   { speed: 0.95, errorPx: 4,  delay: 0.08 },
     powerDelay: [0.5, 2],  // s até usar o poder recebido
     returnSpeed: 0.35,     // fração da velocidade ao voltar pro centro
+    errorSpeedExp: 1.7,    // erro × (velocidade/inicial)^exp — bola rápida engana mais
   },
   WORLD: { w: 270, h: 480 },
   TABLE: { x: 25, y: 80, w: 220, h: 320 },

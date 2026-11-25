@@ -74,7 +74,7 @@ export function updateHud(m, pw) {
   for (const s of [0, 1]) {
     const sc = $('score-' + s);
     if (sc.textContent !== String(m.score[s])) sc.textContent = m.score[s];
-    const bar = pw ? pw.bar[s] / POWERS.hitsToFill : 0;
+    const bar = !pw ? 0 : pw.stored[s] ? 1 : pw.bar[s] / POWERS.hitsToFill;
     $('bar-' + s).style.width = Math.round(bar * 100) + '%';
     const btn = $('power-' + s);
     const stored = pw && pw.stored[s];
