@@ -155,7 +155,7 @@ function onHitFx(g, e, live) {
   if (e.power === 'smash') {
     fx.burst(e.x, e.y, 28, [C.fire, C.fire2, C.fire3, '#fff'], { dir, spread: 2.2, speed: [60, 200], life: [0.3, 0.7], size: [1, 3] });
     fx.ring(e.x, e.y, C.fire2, 28, 0.35);
-    fx.text(e.x, e.y + up * 18, TEXTS.pow, C.fire2, 22, 0.8);
+    fx.text(e.x, e.y + up * 18, TEXTS.pow, C.fire2, 27, 0.8); // 27 = 1 pixel da fonte por pixel do jogo
     fx.shake(FX.shakeSmash);
     fx.flash(C.fire, 0.3);
     if (live) hitStop = Math.max(hitStop, FX.smashStop);

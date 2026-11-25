@@ -6,6 +6,7 @@ export const CONFIG = {
   VERSION_LABEL: 'v0.3 protótipo',
   TITLE: 'PING POW!', // nome provisório, a cliente pode trocar
   DEBUG,
+  FONT: 'Jersey 15', // textos no canvas ("POW!"); no CSS, ver @font-face. Grade de 27 px por em.
   PLAYERS: {
     a: { name: 'Jogadora A', color: '#ff5d8f', hair: '#4a2a1a' }, // trocar pelos nomes reais
     b: { name: 'Jogadora B', color: '#4cc9f0', hair: '#1e1726' },

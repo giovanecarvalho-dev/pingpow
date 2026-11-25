@@ -106,7 +106,7 @@ export function draw(g, withConfetti = true) {
     g.translate(Math.round(t.x), Math.round(t.y - k * 14));
     g.scale(s, s);
     g.globalAlpha = k > 0.75 ? (1 - k) / 0.25 : 1;
-    g.font = `700 ${t.size}px "Pixelify Sans", system-ui, sans-serif`;
+    g.font = `${t.size}px "${CONFIG.FONT}", system-ui, sans-serif`;
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillStyle = '#1a0f2e';
     for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [2, 2]]) g.fillText(t.str, ox, oy);

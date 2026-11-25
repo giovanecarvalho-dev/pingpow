@@ -25,7 +25,7 @@ export function initRender(c) {
   addEventListener('resize', resize);
   addEventListener('orientationchange', () => setTimeout(resize, 100));
   if (window.visualViewport) visualViewport.addEventListener('resize', resize);
-  if (document.fonts) document.fonts.load('700 16px "Pixelify Sans"').catch(() => {});
+  if (document.fonts) document.fonts.load(`27px "${CONFIG.FONT}"`).catch(() => {});
 }
 
 export function resize() {
