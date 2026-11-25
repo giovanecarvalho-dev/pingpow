@@ -244,3 +244,9 @@ input.code:focus { border-color: var(--accent); }
   border-radius: 12px; background: #fff; color: #222; font-size: 18px; text-align: center;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .4); animation: rise .35s cubic-bezier(.2, 1.4, .4, 1) both;
 }
+#update {
+  position: absolute; z-index: 42; left: 12px; right: 12px; top: calc(var(--sat) + 12px); padding: 12px 14px;
+  border-radius: 12px; background: linear-gradient(#ffe36e, #f2b705); color: #3a2600; font-size: 22px;
+  border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink), 0 4px 16px rgba(0, 0, 0, .4);
+  animation: rise .35s cubic-bezier(.2, 1.4, .4, 1) both;
+}

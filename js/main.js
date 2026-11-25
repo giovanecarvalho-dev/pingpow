@@ -11,6 +11,7 @@ import { createPowers, onHit, activate } from './powers.js';
 import { createAI, updateAI } from './ai.js';
 import * as audio from './audio.js';
 import * as net from './net.js';
+import * as pwa from './pwa.js';
 import { snapshot, packEvent, createReplica, pushSnap, pushEvents, updateReplica } from './sync.js';
 
 const { PHYS, TEXTS, PLAYERS, FX, RULES, AUDIO, BALL, PADDLE, NET, COLORS: C } = CONFIG;
@@ -68,6 +69,7 @@ function beginMatch(g) {
   ui.setHud(g.m, true);
   ui.show(null);
   ui.netWait(false);
+  ui.showUpdate(false); // atualização só no menu (recarregar no meio da partida derrubaria o online)
   audio.music('game');
   audio.musicRate(1);
   audio.duck(false);
@@ -81,6 +83,7 @@ function toMenu(msg) {
   ui.setHud(null, false);
   ui.netWait(false);
   ui.show('menu');
+  ui.showUpdate(pwa.hasUpdate());
   if (msg) ui.notice(msg);
   audio.music('menu');
   audio.duck(false);
@@ -430,6 +433,7 @@ ui.initUI({
   onlineHost: () => net.host(netHandlers('host')),
   onlineJoin: (code) => net.join(code, netHandlers('join')),
   onlineCancel: () => net.leave(),
+  update: pwa.applyUpdate,
   mute: audio.toggleMute,
   getVolume: audio.getVolume,
   setVolume: audio.setVolume,
@@ -438,6 +442,11 @@ ui.initUI({
   click: sfx.click,
 });
 ui.setMuteIcon(audio.isMuted());
+// Versão nova baixada: na abertura (ainda em "Toque para jogar") aplica direto; no menu, mostra o aviso.
+pwa.initPWA(() => {
+  if (state === 'BOOT') pwa.applyUpdate();
+  else if (state === 'MENU') ui.showUpdate(true);
+});
 // Pixel art (Fase 3): sem os arquivos, fica tudo no desenho por código.
 loadSprites().then((any) => { if (any) { refreshBackground(); ui.refreshPortraits(); } });
 // iOS pode suspender o áudio ao sair do app: retoma no próximo toque.

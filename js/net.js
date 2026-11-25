@@ -46,6 +46,8 @@ export function send(msg) {
 export async function host(handlers) {
   leave();
   h = handlers; role = 'host';
+  // O prazo conta desde o toque: cobre o carregamento do PeerJS e a resposta do servidor (o código).
+  joinTimer = setTimeout(() => fail('server'), NET.joinTimeout * 1000);
   try { await loadLib(); } catch { return fail('server'); }
   if (role === 'host' && h === handlers) openHost();
 }
@@ -53,7 +55,7 @@ export async function host(handlers) {
 function openHost() {
   code = newCode();
   const p = peer = new window.Peer(NET.prefix + code, peerOpts());
-  p.on('open', () => { if (p === peer) h.code?.(code); });
+  p.on('open', () => { if (p === peer) { clearTimeout(joinTimer); h.code?.(code); } });
   p.on('connection', (c) => { if (p === peer) accept(c); });
   p.on('disconnected', () => { if (p === peer) keepSignal(); });
   p.on('error', (e) => {
@@ -96,6 +98,7 @@ export async function join(roomCode, handlers) {
   leave();
   h = handlers; role = 'guest'; code = roomCode;
   sid = Math.random().toString(36).slice(2, 10);
+  joinTimer = setTimeout(() => { if (!started) fail('fail'); }, NET.joinTimeout * 1000); // desde o toque
   try { await loadLib(); } catch { return fail('server'); }
   if (role !== 'guest' || h !== handlers) return;
   const p = peer = new window.Peer(peerOpts());
@@ -105,7 +108,6 @@ export async function join(roomCode, handlers) {
     if (e.type === 'peer-unavailable') { if (!started) fail('noRoom'); } // reconectando: segue tentando
     else if (!started) fail(errKind(e));
   });
-  joinTimer = setTimeout(() => { if (!started) fail('fail'); }, NET.joinTimeout * 1000);
 }
 
 function dial() {

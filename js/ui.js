@@ -120,6 +120,7 @@ export function initUI(h) {
   screens.boot.addEventListener('pointerdown', h.boot, { once: true });
   $('btn-hint-close').onclick = () => { $('install-hint').hidden = true; };
   $('notice').onclick = () => { $('notice').hidden = true; };
+  $('update').onclick = () => h.update();
   initOnline(h);
   addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('button')) h.click(); });
 }
@@ -180,6 +181,8 @@ export function netStatus(where, text, kind = '') {
   el.classList.toggle('blink', kind === 'wait');
   if (where === 'join') $('btn-join-go').disabled = kind === 'wait';
 }
+
+export function showUpdate(on) { $('update').hidden = !on; }
 
 export function netWait(on) { $('net-wait').hidden = !on; }
 

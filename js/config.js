@@ -2,10 +2,11 @@
 const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 
 export const CONFIG = {
-  VERSION: '0.3.0',
+  VERSION: '0.3.1',
   VERSION_LABEL: 'v0.3 protótipo',
   TITLE: 'PING POW!', // nome provisório, a cliente pode trocar
   DEBUG,
+  OFFLINE: true, // service worker (cache offline + atualização). Emergência: false + tools/sw-kill.js no lugar do sw.js
   FONT: 'Jersey 15', // textos no canvas ("POW!"); no CSS, ver @font-face. Grade de 27 px por em.
   PLAYERS: {
     a: { name: 'Jogadora A', color: '#ff5d8f', hair: '#4a2a1a' }, // trocar pelos nomes reais
@@ -64,7 +65,7 @@ export const CONFIG = {
     interpDelay: 0.1,                   // s de buffer da convidada pra interpolar os snapshots
     pingEvery: 1, timeout: 3,           // s entre pings · s sem nenhuma mensagem = conexão caiu
     reconnectSecs: 10, retryEvery: 2,   // s tentando reconectar antes de voltar ao menu · s entre tentativas
-    joinTimeout: 12,                    // s pra conseguir entrar numa sala
+    joinTimeout: 20,                    // s pra criar/entrar numa sala (o servidor leva até ~10 s pra dizer que a sala não existe)
     // null = padrão do PeerJS (STUN do Google + TURN gratuito do PeerJS). Se o 4G falhar, pôr outro TURN aqui.
     iceServers: null,
   },
@@ -106,11 +107,12 @@ export const CONFIG = {
     netServer: 'Sem conexão com o servidor. Confira a internet e tente de novo.',
     netNoRoom: 'Sala não encontrada. Confira o código.',
     netFail: 'Não deu pra conectar. Tente de novo.',
-    netVersion: 'Versões diferentes do jogo: fechem e abram o app de novo.',
+    netVersion: 'Versões diferentes do jogo: as duas precisam atualizar (fechem e abram o app).',
     netBusy: 'Essa sala já está cheia.',
     netLost: 'A conexão caiu. 😢', netLeft: '{nome} saiu da partida.',
     reconnecting: 'Reconectando…',
     rematchWait: 'Esperando {nome}…', rematchAsk: '{nome} quer revanche!',
+    update: '✨ Nova versão: toque para atualizar',
     sound: 'Som', music: '🎵 Música', sfx: '💥 Efeitos',
     mute: '🔇 Silenciar tudo', unmute: '🔊 Ligar o som', done: 'Pronto',
   },
