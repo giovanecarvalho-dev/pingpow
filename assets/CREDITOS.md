@@ -11,6 +11,7 @@ Todos os assets de terceiros abaixo têm licença livre e podem ser redistribuí
 | `audio/music_game.mp3` ("Stage 1") | [Chiptune Adventures](https://opengameart.org/content/4-chiptunes-adventure) | Juhani Junkala | CC0 |
 | `audio/music_menu.mp3` ("Title Screen"), `music_win.mp3` ("Ending") | [5 Chiptunes (Action)](https://opengameart.org/content/5-chiptunes-action) | Juhani Junkala | CC0 |
 | `fonts/PixelifySans.woff2` | [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans) (subconjunto latino) | Stefie Justprince | SIL OFL 1.1 (`fonts/OFL.txt`) |
+| `../js/vendor/peerjs.min.js` (código, v1.5.5) | [PeerJS](https://github.com/peers/peerjs) | Michelle Bu, Eric Zhang e colaboradores | MIT (`js/vendor/peerjs.LICENSE.txt`) |
 
 Os sons foram cortados, normalizados e convertidos (WAV curto para efeitos, MP3 para músicas e jingles).
 Aplausos, "fuuush" do smash e sons de reserva são sintetizados no código (`js/audio.js`).

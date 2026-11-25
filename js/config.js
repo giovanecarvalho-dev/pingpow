@@ -2,8 +2,8 @@
 const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 
 export const CONFIG = {
-  VERSION: '0.2.0',
-  VERSION_LABEL: 'v0.2 protótipo',
+  VERSION: '0.3.0',
+  VERSION_LABEL: 'v0.3 protótipo',
   TITLE: 'PING POW!', // nome provisório, a cliente pode trocar
   DEBUG,
   PLAYERS: {
@@ -56,6 +56,17 @@ export const CONFIG = {
            ready: 0.24, rally: 0.19, fire: 0.43, curve: 0.53, freeze: 0.41, ice: 0.3, lose: 0.34,
            click: 0.5, applause: 1.6, applauseFinal: 2.9 },
   },
+  NET: {
+    prefix: 'pingpow-',                 // Peer ID do host = prefix + código da sala
+    codeLen: 4, codeChars: 'ABCDEFGHJKMNPQRSTUVWXYZ', // só letras, sem O, I e L
+    inputRate: 60, snapRate: 30,        // mensagens/s: convidada → host (dedo) e host → convidada (snapshots)
+    interpDelay: 0.1,                   // s de buffer da convidada pra interpolar os snapshots
+    pingEvery: 1, timeout: 3,           // s entre pings · s sem nenhuma mensagem = conexão caiu
+    reconnectSecs: 10, retryEvery: 2,   // s tentando reconectar antes de voltar ao menu · s entre tentativas
+    joinTimeout: 12,                    // s pra conseguir entrar numa sala
+    // null = padrão do PeerJS (STUN do Google + TURN gratuito do PeerJS). Se o 4G falhar, pôr outro TURN aqui.
+    iceServers: null,
+  },
   WORLD: { w: 270, h: 480 },
   TABLE: { x: 25, y: 80, w: 220, h: 320 },
   PHYS:  { step: 1 / 240, maxFrame: 0.25 },
@@ -72,7 +83,6 @@ export const CONFIG = {
     tapToPlay: 'Toque para jogar',
     whoAreYou: 'Quem é você?',
     local: '2 Jogadoras', cpu: 'Contra a CPU', online: 'Online',
-    soon: 'em breve',
     easy: 'Fácil', normal: 'Normal', hard: 'Difícil',
     serve: 'Saque: {nome}', point: 'Ponto de {nome}!',
     paused: 'Pausado', resume: 'Continuar', menu: 'Menu', rematch: 'Revanche',
@@ -84,6 +94,20 @@ export const CONFIG = {
     pow: 'POW!',
     dragHint: 'Arraste o dedo pra mover a raquete',
     powerNames: { smash: '🔥 SMASH DE FOGO!', curve: '🌀 BOLA CURVA!', freeze: '❄️ CONGELOU!' },
+    createRoom: 'Criar sala', joinRoom: 'Entrar numa sala', back: 'Voltar', cancel: 'Cancelar', enter: 'Entrar',
+    roomCode: 'Manda esse código pra ela:', waiting: 'Aguardando a outra jogadora…', typeCode: 'Digite o código da sala:',
+    shareCode: '📤 Mandar o código', copied: 'Código copiado!',
+    shareText: 'Bora jogar {titulo}? 🏓 Abre o jogo, toca em Online → Entrar numa sala e digita o código: {codigo}',
+    keepOpen: 'Deixa o jogo aberto até ela entrar.',
+    codeShort: 'O código tem 4 letras.', connecting: 'Conectando…', connected: 'Conectou! 🎉',
+    netServer: 'Sem conexão com o servidor. Confira a internet e tente de novo.',
+    netNoRoom: 'Sala não encontrada. Confira o código.',
+    netFail: 'Não deu pra conectar. Tente de novo.',
+    netVersion: 'Versões diferentes do jogo: fechem e abram o app de novo.',
+    netBusy: 'Essa sala já está cheia.',
+    netLost: 'A conexão caiu. 😢', netLeft: '{nome} saiu da partida.',
+    reconnecting: 'Reconectando…',
+    rematchWait: 'Esperando {nome}…', rematchAsk: '{nome} quer revanche!',
     sound: 'Som', music: '🎵 Música', sfx: '💥 Efeitos',
     mute: '🔇 Silenciar tudo', unmute: '🔊 Ligar o som', done: 'Pronto',
   },

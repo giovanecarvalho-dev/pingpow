@@ -1,18 +1,21 @@
 # Driver mínimo do Chrome via DevTools Protocol: abre a página, executa passos e tira prints.
 # Requer: pip install websocket-client. Uso: python3 tools/cdp.py <pasta de saída> <url> '<passos json>'
 # Passos: ["wait",s] ["until","expr js",timeout] ["tap",x,y] ["tapsel","seletor"] ["drag","seletor",de,ate] ["eval","expr"] ["shot","nome"]
+#         ["save","expr js","arquivo"] (grava o valor) · ["typefile","seletor","arquivo",timeout] (espera o arquivo e digita o conteúdo)
+# Dois Chromes ao mesmo tempo (ex.: host e convidada do online): CDP_PORT=9334 numa das execuções.
 # Ex.: python3 tools/cdp.py /tmp/x 'http://127.0.0.1:5173/?debug=1&bot=easy' '[["until","!document.getElementById(\"screen-over\").hidden",150],["shot","vitoria"]]'
 import json, sys, time, base64, subprocess, urllib.request, websocket, os, shutil
 OUT = sys.argv[1]; URL = sys.argv[2]; STEPS = json.loads(sys.argv[3]); W, H = 390, 844
+PORT = int(os.environ.get('CDP_PORT', 9333))
 prof = OUT + '/prof'; shutil.rmtree(prof, ignore_errors=True)
 chrome = subprocess.Popen(['google-chrome', '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--remote-debugging-port=9333', '--remote-allow-origins=http://127.0.0.1:9333', f'--user-data-dir={prof}', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required',
+  f'--remote-debugging-port={PORT}', f'--remote-allow-origins=http://127.0.0.1:{PORT}', '--disable-features=WebRtcHideLocalIpsWithMdns', f'--user-data-dir={prof}', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required',
   f'--window-size={W},{H}', 'about:blank'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     for _ in range(50):
-        try: tabs = json.load(urllib.request.urlopen('http://127.0.0.1:9333/json')); break
+        try: tabs = json.load(urllib.request.urlopen(f'http://127.0.0.1:{PORT}/json')); break
         except Exception: time.sleep(0.2)
-    ws = websocket.create_connection([t for t in tabs if t['type'] == 'page'][0]['webSocketDebuggerUrl'], origin='http://127.0.0.1:9333')
+    ws = websocket.create_connection([t for t in tabs if t['type'] == 'page'][0]['webSocketDebuggerUrl'], origin=f'http://127.0.0.1:{PORT}')
     mid = [0]; logs = []
     def call(method, **params):
         mid[0] += 1; i = mid[0]; ws.send(json.dumps({'id': i, 'method': method, 'params': params}))
@@ -58,6 +61,15 @@ try:
             x, y = r['result']['value']; tap(x, y)
         elif k == 'eval':
             r = call('Runtime.evaluate', expression=st[1], returnByValue=True); print('EVAL', st[1][:60], '=>', r.get('result', {}).get('value'))
+        elif k == 'save':
+            r = call('Runtime.evaluate', expression=st[1], returnByValue=True); v = r.get('result', {}).get('value')
+            open(st[2], 'w').write(str(v)); print('save', v)
+        elif k == 'typefile':
+            t0 = time.time()
+            while not os.path.exists(st[2]) and time.time() - t0 < st[3]: call('Runtime.evaluate', expression='1'); time.sleep(0.3)
+            txt = open(st[2]).read().strip()
+            call('Runtime.evaluate', expression=f"(()=>{{const e=document.querySelector({json.dumps(st[1])});e.value={json.dumps(txt)};e.dispatchEvent(new Event('input'))}})()")
+            print('typed', txt)
         elif k == 'shot':
             r = call('Page.captureScreenshot', format='png'); open(f'{OUT}/{st[1]}.png', 'wb').write(base64.b64decode(r['data'])); print('shot', st[1])
     for l in logs: print(l)

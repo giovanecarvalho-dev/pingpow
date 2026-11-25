@@ -15,7 +15,7 @@ export function initInput(mapFn, powerCb) {
   onPower = powerCb;
 
   addEventListener('pointerdown', (e) => {
-    if (e.target.closest && e.target.closest('button, .screen, #install-hint')) return;
+    if (e.target.closest && e.target.closest('button, input, .screen, #install-hint, #net-wait, #notice')) return;
     const p = toLogical(e.clientX, e.clientY);
     const side = singleSide ? 0 : (p.y >= H / 2 ? 0 : 1);
     pointers.set(e.pointerId, { side });
@@ -31,6 +31,7 @@ export function initInput(mapFn, powerCb) {
   addEventListener('pointercancel', end);
 
   addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return; // digitando o código da sala
     keys.add(e.code);
     if (e.repeat) return;
     if (e.code === 'KeyW') onPower(0);

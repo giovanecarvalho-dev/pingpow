@@ -32,6 +32,7 @@
   <div class="toast-wrap" id="tw-1"><div class="toast" id="toast-1"></div></div>
   <div class="toast-wrap" id="tw-0"><div class="toast" id="toast-0"></div></div>
   <button id="btn-pause" aria-label="Pausar">⏸</button>
+  <div id="net-ping" hidden></div>
 </div>
 
 <section class="screen" id="screen-boot">
@@ -53,8 +54,32 @@
     <button class="chip" data-level="normal" data-text="normal"></button>
     <button class="chip" data-level="hard" data-text="hard"></button>
   </div>
-  <button class="big" id="btn-online" disabled><span data-text="online"></span> <small data-text="soon"></small></button>
+  <button class="big" id="btn-online" data-text="online"></button>
   <footer><button class="icon btn-sound" aria-label="Som">🔊</button><span id="version"></span></footer>
+</section>
+
+<section class="screen online" id="screen-online" hidden>
+  <h2 data-text="online"></h2>
+  <button class="big" id="btn-host" data-text="createRoom"></button>
+  <button class="big" id="btn-join" data-text="joinRoom"></button>
+  <button class="big" id="btn-online-back" data-text="back"></button>
+</section>
+
+<section class="screen online" id="screen-host" hidden>
+  <p class="label" data-text="roomCode"></p>
+  <p class="code" id="room-code"></p>
+  <button class="big" id="btn-share" data-text="shareCode" hidden></button>
+  <p class="label net-status" id="host-status"></p>
+  <p class="label hint" data-text="keepOpen"></p>
+  <button class="big" id="btn-host-cancel" data-text="cancel"></button>
+</section>
+
+<section class="screen online" id="screen-join" hidden>
+  <p class="label" data-text="typeCode"></p>
+  <input id="join-code" class="code" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="Código da sala">
+  <button class="big" id="btn-join-go" data-text="enter"></button>
+  <p class="label net-status" id="join-status"></p>
+  <button class="big" id="btn-join-cancel" data-text="cancel"></button>
 </section>
 
 <section class="screen dim" id="screen-pause" hidden>
@@ -68,6 +93,7 @@
   <div class="hero"><div class="rays"></div><div class="portrait" id="over-portrait"></div></div>
   <h2 id="over-msg"></h2>
   <p class="label" id="over-score"></p>
+  <p class="label" id="over-note"></p>
   <button class="big" id="btn-rematch" data-text="rematch"></button>
   <button class="big" id="btn-over-menu" data-text="menu"></button>
 </section>
@@ -82,6 +108,8 @@
   <button class="big" id="btn-sound-ok" data-text="done"></button>
 </section>
 
+<div id="net-wait" hidden><p class="blink" data-text="reconnecting"></p><button class="big" id="btn-net-menu" data-text="menu"></button></div>
+<div id="notice" hidden></div>
 <div id="rotate" hidden><p data-text="rotate"></p></div>
 <div id="install-hint" hidden><span data-text="install"></span><button class="icon" id="btn-hint-close" aria-label="Fechar">✕</button></div>
 <div id="fps" hidden></div>

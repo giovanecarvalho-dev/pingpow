@@ -2,12 +2,15 @@
 import { CONFIG } from './config.js';
 import { drawPortrait } from './render.js';
 
-const { TEXTS, PLAYERS, POWERS } = CONFIG;
+const { TEXTS, PLAYERS, POWERS, NET } = CONFIG;
 const $ = (id) => document.getElementById(id);
-const screens = { boot: $('screen-boot'), menu: $('screen-menu'), pause: $('screen-pause'), over: $('screen-over'), sound: $('screen-sound') };
+const screens = {
+  boot: $('screen-boot'), menu: $('screen-menu'), pause: $('screen-pause'), over: $('screen-over'), sound: $('screen-sound'),
+  online: $('screen-online'), host: $('screen-host'), join: $('screen-join'),
+};
 const POWER_ICON = { smash: '🔥', curve: '🌀', freeze: '❄️' };
 const STORE_KEY = 'pingpow.who', HINT_KEY = 'pingpow.hint';
-let toastTimer = 0, soundBack = 'menu';
+let toastTimer = 0, noticeTimer = 0, soundBack = 'menu';
 
 export const fill = (tpl, nome) => tpl.replace('{nome}', nome);
 export const playerName = (key) => PLAYERS[key].name;
@@ -100,8 +103,93 @@ export function initUI(h) {
   document.querySelectorAll('.vol').forEach((el) => initSlider(el, h));
   screens.boot.addEventListener('pointerdown', h.boot, { once: true });
   $('btn-hint-close').onclick = () => { $('install-hint').hidden = true; };
+  $('notice').onclick = () => { $('notice').hidden = true; };
+  initOnline(h);
   addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('button')) h.click(); });
 }
+
+// Menu Online: criar sala (mostra o código) ou entrar (digita o código).
+function initOnline(h) {
+  const input = $('join-code'), go = $('btn-join-go');
+  $('btn-online').onclick = () => show('online');
+  $('btn-online-back').onclick = () => show('menu');
+  $('btn-host').onclick = () => {
+    $('room-code').textContent = '';
+    $('btn-share').hidden = true;
+    netStatus('host', TEXTS.connecting, 'wait');
+    show('host');
+    h.onlineHost();
+  };
+  // Folha de compartilhar do iOS: abre por cima do jogo (sair do app pode derrubar a sala).
+  $('btn-share').onclick = () => {
+    const code = $('room-code').textContent;
+    const text = TEXTS.shareText.replace('{titulo}', CONFIG.TITLE).replace('{codigo}', code);
+    if (navigator.share) navigator.share({ text }).catch(() => {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(code).then(() => notice(TEXTS.copied), () => {});
+  };
+  $('btn-join').onclick = () => {
+    input.value = '';
+    netStatus('join', '');
+    show('join');
+    input.focus();
+  };
+  input.addEventListener('input', () => {
+    const v = input.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, NET.codeLen);
+    if (input.value !== v) input.value = v;
+  });
+  const submit = () => {
+    if (go.disabled) return;
+    if (input.value.length < NET.codeLen) { netStatus('join', TEXTS.codeShort, 'err'); return; }
+    input.blur();
+    netStatus('join', TEXTS.connecting, 'wait');
+    h.onlineJoin(input.value);
+  };
+  go.onclick = submit;
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  $('btn-host-cancel').onclick = $('btn-join-cancel').onclick = () => { h.onlineCancel(); show('online'); };
+  $('btn-net-menu').onclick = () => h.menu();
+}
+
+export function setRoomCode(code) {
+  $('room-code').textContent = code;
+  $('btn-share').hidden = !(navigator.share || navigator.clipboard);
+  netStatus('host', TEXTS.waiting, 'wait');
+}
+
+// where: 'host' | 'join' · kind: '' | 'wait' (piscando; trava o Entrar) | 'err'
+export function netStatus(where, text, kind = '') {
+  const el = $(where + '-status');
+  el.textContent = text;
+  el.classList.toggle('err', kind === 'err');
+  el.classList.toggle('blink', kind === 'wait');
+  if (where === 'join') $('btn-join-go').disabled = kind === 'wait';
+}
+
+export function netWait(on) { $('net-wait').hidden = !on; }
+
+export function notice(text) {
+  const el = $('notice');
+  el.textContent = text;
+  el.hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => { el.hidden = true; }, 4500);
+}
+
+export function setPing(ms) {
+  const el = $('net-ping');
+  const t = ms ? ms + ' ms' : '…';
+  if (el.textContent !== t) el.textContent = t;
+  el.classList.toggle('mid', ms > 120 && ms <= 250);
+  el.classList.toggle('bad', ms > 250);
+}
+
+export function rematchWait(name) {
+  const b = $('btn-rematch');
+  b.disabled = true;
+  b.textContent = fill(TEXTS.rematchWait, name);
+}
+
+export function rematchAsk(name) { $('over-note').textContent = fill(TEXTS.rematchAsk, name); }
 
 export function setMuteIcon(muted) {
   document.querySelectorAll('.btn-sound').forEach((b) => { b.textContent = muted ? '🔇' : '🔊'; });
@@ -119,6 +207,7 @@ export function setHud(m, visible) {
   hud.hidden = !visible;
   if (!m) return;
   hud.classList.toggle('local', m.mode === 'local');
+  $('net-ping').hidden = m.mode !== 'online';
   for (const s of [0, 1]) {
     const key = m.keys[s];
     $('name-' + s).textContent = m.mode === 'cpu' && s === 1 ? `${playerName(key)} (${TEXTS.cpuName})` : playerName(key);
@@ -174,6 +263,9 @@ export function showOver(m, name) {
   box.textContent = '';
   box.style.setProperty('--pc', PLAYERS[key].color);
   box.appendChild(portrait(key));
+  $('over-note').textContent = '';
+  $('btn-rematch').disabled = false;
+  $('btn-rematch').textContent = TEXTS.rematch;
   show('over');
 }
 

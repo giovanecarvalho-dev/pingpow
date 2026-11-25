@@ -206,3 +206,38 @@ footer { position: absolute; bottom: calc(var(--sab) + 10px); display: flex; ali
 }
 #install-hint .icon { color: #222; font-size: 18px; }
 #fps { position: absolute; z-index: 60; left: calc(var(--sal) + 4px); top: calc(var(--sat) + 40%); font: 12px monospace; color: #0f0; }
+
+/* ---------- Online ---------- */
+.screen.online { background: linear-gradient(rgba(24, 20, 52, .55), rgba(24, 20, 52, .86)); }
+#btn-online { background: linear-gradient(#a98bff, #6a4fd6); }
+#btn-host { background: linear-gradient(#ffe36e, #f2b705); color: #3a2600; text-shadow: none; }
+#btn-share { background: linear-gradient(#7cf29a, #2fb75a); color: #0f3a1d; text-shadow: none; font-size: 20px; }
+.hint { font-size: 14px; opacity: .75; }
+.code {
+  margin: 0; min-height: 1.15em; font-size: 64px; font-weight: 700; letter-spacing: 12px; text-indent: 12px;
+  color: var(--accent); text-shadow: 4px 4px 0 #000;
+}
+/* font-size ≥ 16px: o iOS não dá zoom ao focar. user-select liberado: sem isso o iOS não deixa digitar. */
+input.code {
+  width: min(250px, 76vw); padding: 4px 0; font-family: inherit; font-size: 48px; text-align: center; text-transform: uppercase;
+  text-shadow: none; background: #2c2760; border: 3px solid var(--ink); border-radius: 12px; outline: none;
+  box-shadow: 0 3px 0 var(--ink), inset 0 3px 0 rgba(0, 0, 0, .3);
+  -webkit-user-select: text; user-select: text; touch-action: manipulation;
+}
+input.code:focus { border-color: var(--accent); }
+.net-status { min-height: 1.3em; max-width: 86vw; }
+.net-status.err { color: #ff8fa3; }
+#net-ping { position: absolute; right: calc(var(--sar) + 6px); top: calc(50% + 26px); width: 40px; text-align: center;
+  font-size: 11px; color: #7cf29a; text-shadow: 1px 1px 0 #000; }
+#net-ping.mid { color: var(--accent); }
+#net-ping.bad { color: #ff6b81; }
+#over-note { color: var(--accent); min-height: 1.2em; }
+#net-wait {
+  position: absolute; inset: 0; z-index: 45; display: flex; flex-direction: column; gap: 22px;
+  align-items: center; justify-content: center; background: rgba(20, 16, 45, .86);
+}
+#notice {
+  position: absolute; z-index: 41; left: 12px; right: 12px; top: calc(var(--sat) + 12px); padding: 12px 14px;
+  border-radius: 12px; background: #fff; color: #222; font-size: 16px; text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .4); animation: rise .35s cubic-bezier(.2, 1.4, .4, 1) both;
+}
