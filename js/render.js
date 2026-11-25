@@ -2,8 +2,9 @@
 import { CONFIG } from './config.js';
 import { clamp } from './physics.js';
 import * as fx from './fx.js';
+import * as spr from './sprites.js';
 
-const { WORLD: { w: W, h: H }, TABLE: T, COLORS: C, PADDLE, BALL, PLAYERS, RULES } = CONFIG;
+const { WORLD: { w: W, h: H }, TABLE: T, COLORS: C, PADDLE, BALL, PLAYERS, RULES, SPRITES } = CONFIG;
 const buf = document.createElement('canvas');
 buf.width = W; buf.height = H;
 const g = buf.getContext('2d');
@@ -13,6 +14,7 @@ let canvas, ctx;
 const view = { scale: 1, ox: 0, oy: 0, dpr: 1 };
 const trail = [];
 let time = 0;
+let barTop = C.floor, barBottom = C.floor; // faixas que sobram da tela (letterbox): cor das bordas do cenário
 let dimA = 0, dimGrad = null; // escurecido da tela de vitória
 
 export function initRender(c) {
@@ -42,6 +44,9 @@ export function resize() {
   dimGrad.addColorStop(1, C.overDim[1]);
 }
 
+// Os sprites terminaram de carregar: redesenha o cenário (pode ter o arena_bg).
+export function refreshBackground() { drawBackground(bg.getContext('2d')); }
+
 // Coordenadas da tela (CSS px) -> coordenadas lógicas, limitadas ao mundo.
 export function toLogical(cx, cy) {
   return { x: clamp((cx - view.ox) / view.scale, 0, W), y: clamp((cy - view.oy) / view.scale, 0, H) };
@@ -58,17 +63,38 @@ function disc(x, y, r, color, c = g) {
 }
 
 // ---------- Cenário (estático) ----------
+// Cor média da primeira e da última linha da arte (pras faixas da tela combinarem com ela).
+function edgeColors(img) {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const t = c.getContext('2d', { willReadFrequently: true });
+  t.drawImage(img, 0, 0, W, H);
+  return [0, H - 1].map((y) => {
+    const d = t.getImageData(0, y, W, 1).data, n = d.length / 4;
+    let r = 0, gr = 0, bl = 0;
+    for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; bl += d[i + 2]; }
+    return `rgb(${Math.round(r / n)},${Math.round(gr / n)},${Math.round(bl / n)})`;
+  });
+}
+
 function drawBackground(b) {
   b.fillStyle = C.floor;
   b.fillRect(0, 0, W, H);
-  b.fillStyle = C.floor2; // piso quadriculado
-  for (let y = 0; y < H; y += 15) for (let x = ((y / 15) % 2) * 15; x < W; x += 30) b.fillRect(x, y, 15, 15);
-  const light = b.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, 300); // holofote + vinheta
-  light.addColorStop(0, 'rgba(255,255,255,.07)');
-  light.addColorStop(0.55, 'rgba(0,0,0,0)');
-  light.addColorStop(1, 'rgba(0,0,0,.5)');
-  b.fillStyle = light;
-  b.fillRect(0, 0, W, H);
+  const arena = spr.anim('arena_bg');
+  barTop = barBottom = C.floor;
+  if (arena) { // piso da arte; a mesa e a rede continuam por código
+    b.drawImage(arena.img, 0, 0, W, H);
+    [barTop, barBottom] = edgeColors(arena.img);
+  } else {
+    b.fillStyle = C.floor2; // piso quadriculado
+    for (let y = 0; y < H; y += 15) for (let x = ((y / 15) % 2) * 15; x < W; x += 30) b.fillRect(x, y, 15, 15);
+    const light = b.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, 300); // holofote + vinheta
+    light.addColorStop(0, 'rgba(255,255,255,.07)');
+    light.addColorStop(0.55, 'rgba(0,0,0,0)');
+    light.addColorStop(1, 'rgba(0,0,0,.5)');
+    b.fillStyle = light;
+    b.fillRect(0, 0, W, H);
+  }
   b.fillStyle = 'rgba(0,0,0,.35)'; // sombra da mesa
   b.fillRect(T.x + 6, T.y + 8, T.w, T.h);
   b.fillStyle = C.tableDark; // frente da mesa (espessura)
@@ -96,9 +122,33 @@ function drawBackground(b) {
   b.fillRect(T.x + T.w + 3, ny - 4, 4, 7);
 }
 
-// ---------- Personagens (formas simples, animadas) ----------
+// ---------- Personagens ----------
+// Com sprite: {key}_{back|front}_{idle|run|swing} e {key}_win. Animação que faltar cai na idle; sem idle, desenho por código.
+function drawCharSprite(p, key, mood) {
+  const view = p.side === 0 ? 'back' : 'front';
+  const state = mood === 'win' ? 'win' : mood !== 'play' ? 'idle' : p.swing > 0 ? 'swing' : Math.abs(p.vx) > 30 ? 'run' : 'idle';
+  const wanted = state === 'win' ? spr.anim(key + '_win') : spr.anim(`${key}_${view}_${state}`);
+  const a = wanted || spr.anim(`${key}_${view}_idle`);
+  if (!a) return false;
+  // A rebatida acompanha o `swing` da raquete (1 → 0); as outras rodam no fps do sprites.json.
+  const i = state === 'swing' && wanted ? Math.min(a.frames - 1, Math.floor((1 - p.swing) * a.frames)) : spr.frameAt(a, time + p.side * 0.37);
+  const foot = Math.round(p.y + SPRITES.footY[view]);
+  let x = Math.round(p.x), y = foot;
+  // Comemoração sem sprite de vitória (ou ponto): pulinhos por código, como nas formas simples.
+  if (mood === 'happy' || (mood === 'win' && !wanted)) y -= Math.round(Math.abs(Math.sin(time * (mood === 'win' ? 7 : 10) + p.side)) * (mood === 'win' ? 9 : 5));
+  else if (mood === 'sad') y += 1;
+  if (p.frozen > 0) x += Math.round(Math.sin(time * 60)); // tremendo de frio
+  g.fillStyle = C.shadow;
+  g.fillRect(x - 8, foot - 2, 16, 3);
+  const flip = a.flip && p.vx < -30;
+  if (p.frozen > 0) spr.drawTinted(g, a, i, x, y, flip, C.freeze, 0.5);
+  else spr.drawAnim(g, a, i, x, y, flip);
+  return true;
+}
+
 // mood: 'play' | 'happy' | 'win' | 'sad'
 function drawCharacter(p, key, mood) {
+  if (drawCharSprite(p, key, mood)) return;
   const P = PLAYERS[key];
   const back = p.side === 0; // P1 (embaixo) aparece de costas; P2 (em cima), de frente
   const dir = back ? 1 : -1; // pra onde fica "atrás" da raquete
@@ -227,11 +277,15 @@ function drawBall(m) {
   g.fillRect(sx - 2, sy - 2, 5, 5);
   const r = BALL.radius + (z > 9 ? 1 : 0);
   const col = b.smash ? (Math.floor(time * 24) % 2 ? C.fire2 : '#fff') : b.curve ? '#f3e0ff' : C.ball;
-  disc(b.x, b.y, r, col);
-  g.fillStyle = 'rgba(0,0,0,.18)';
-  g.fillRect(Math.round(b.x) - 1, Math.round(b.y) + r - 1, 3, 1);
-  g.fillStyle = '#fff';
-  g.fillRect(Math.round(b.x) - 2, Math.round(b.y) - 2, 2, 1);
+  const ballSpr = spr.anim('ball');
+  if (ballSpr && !(b.smash && col === C.fire2)) spr.drawAnim(g, ballSpr, 0, b.x, b.y); // no smash, pisca com o fogo
+  else {
+    disc(b.x, b.y, r, col);
+    g.fillStyle = 'rgba(0,0,0,.18)';
+    g.fillRect(Math.round(b.x) - 1, Math.round(b.y) + r - 1, 3, 1);
+    g.fillStyle = '#fff';
+    g.fillRect(Math.round(b.x) - 2, Math.round(b.y) - 2, 2, 1);
+  }
   if (!serving) {
     if (b.smash) fx.burst(b.x, b.y, 2, [C.fire, C.fire2, C.fire3], { speed: [8, 35], life: [0.18, 0.4], size: [1, 3], grav: -30 });
     else if (b.curve && Math.random() < 0.7) fx.burst(b.x, b.y, 1, [C.curve, C.curve2, '#fff'], { speed: [5, 25], life: [0.3, 0.5] });
@@ -248,7 +302,15 @@ function drawBall(m) {
 
 // Retrato 32×32 (menu e vitória): busto de frente, no mesmo estilo provisório das personagens.
 export function drawPortrait(c, key) {
+  const a = spr.anim(key + '_portrait');
+  if (a) {
+    c.canvas.width = a.fw; c.canvas.height = a.fh; // 64×64
+    c.imageSmoothingEnabled = false;
+    c.drawImage(a.img, 0, 0, a.fw, a.fh, 0, 0, a.fw, a.fh);
+    return;
+  }
   const P = PLAYERS[key];
+  if (c.canvas.width !== 32) c.canvas.width = c.canvas.height = 32;
   c.clearRect(0, 0, 32, 32);
   c.fillStyle = P.color;
   c.fillRect(6, 24, 20, 8);
@@ -308,8 +370,11 @@ export function draw(m, dt, over = false) {
   // Tela: fundo nas faixas + buffer escalado (com tremor e zoom da câmera).
   const cam = fx.camera();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = C.floor;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const half = Math.round(canvas.height / 2);
+  ctx.fillStyle = barTop;
+  ctx.fillRect(0, 0, canvas.width, half);
+  ctx.fillStyle = barBottom;
+  ctx.fillRect(0, half, canvas.width, canvas.height - half);
   ctx.imageSmoothingEnabled = false;
   const s = view.scale * view.dpr;
   const sw = W / cam.zoom, sh = H / cam.zoom;

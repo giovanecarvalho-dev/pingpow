@@ -2,7 +2,8 @@
 import { CONFIG } from './config.js';
 import { initInput, applyInput, setSingleSide, resetInput } from './input.js';
 import { createMatch, updateMatch, isWin } from './match.js';
-import { initRender, draw, toLogical } from './render.js';
+import { initRender, draw, toLogical, refreshBackground } from './render.js';
+import { loadSprites } from './sprites.js';
 import { PADDLE_Y, stepPaddle } from './physics.js';
 import * as ui from './ui.js';
 import * as fx from './fx.js';
@@ -437,6 +438,8 @@ ui.initUI({
   click: sfx.click,
 });
 ui.setMuteIcon(audio.isMuted());
+// Pixel art (Fase 3): sem os arquivos, fica tudo no desenho por código.
+loadSprites().then((any) => { if (any) { refreshBackground(); ui.refreshPortraits(); } });
 // iOS pode suspender o áudio ao sair do app: retoma no próximo toque.
 addEventListener('pointerdown', audio.unlock);
 checkOrientation();

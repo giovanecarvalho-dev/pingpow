@@ -1,6 +1,7 @@
 // Telas e HUD em DOM.
 import { CONFIG } from './config.js';
 import { drawPortrait } from './render.js';
+import { anim } from './sprites.js';
 
 const { TEXTS, PLAYERS, POWERS, NET } = CONFIG;
 const $ = (id) => document.getElementById(id);
@@ -9,6 +10,7 @@ const screens = {
   online: $('screen-online'), host: $('screen-host'), join: $('screen-join'),
 };
 const POWER_ICON = { smash: '🔥', curve: '🌀', freeze: '❄️' };
+const POWER_SPRITE = { smash: 'icon_fire', curve: 'icon_curve', freeze: 'icon_ice' }; // trocam o emoji, se existirem
 const STORE_KEY = 'pingpow.who', HINT_KEY = 'pingpow.hint';
 let toastTimer = 0, noticeTimer = 0, soundBack = 'menu';
 
@@ -60,8 +62,22 @@ function portrait(key) {
   const c = document.createElement('canvas');
   c.width = c.height = 32;
   c.className = 'mini';
+  c.dataset.key = key;
   drawPortrait(c.getContext('2d'), key);
   return c;
+}
+
+// Os sprites carregaram depois do menu montado: redesenha os retratos (64×64, se existirem).
+export function refreshPortraits() {
+  document.querySelectorAll('canvas[data-key]').forEach((c) => drawPortrait(c.getContext('2d'), c.dataset.key));
+}
+
+function setPowerIcon(btn, p) {
+  const a = anim(POWER_SPRITE[p]);
+  if (!a) { btn.textContent = POWER_ICON[p]; return; }
+  const img = new Image();
+  img.src = a.img.src; img.alt = ''; img.className = 'picon';
+  btn.replaceChildren(img);
 }
 
 export function initUI(h) {
@@ -230,7 +246,7 @@ export function updateHud(m, pw, cpu = [false, false]) {
     const btn = $('power-' + s);
     const showBtn = !!stored && !cpu[s];
     btn.hidden = !showBtn;
-    if (showBtn && btn.dataset.p !== stored) { btn.dataset.p = stored; btn.textContent = POWER_ICON[stored]; }
+    if (showBtn && btn.dataset.p !== stored) { btn.dataset.p = stored; setPowerIcon(btn, stored); }
   }
 }
 

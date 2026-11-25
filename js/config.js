@@ -67,6 +67,8 @@ export const CONFIG = {
     // null = padrão do PeerJS (STUN do Google + TURN gratuito do PeerJS). Se o 4G falhar, pôr outro TURN aqui.
     iceServers: null,
   },
+  // Sprites (Fase 3): Y dos pés em relação à raquete. De costas = P1 (embaixo), de frente = P2 (em cima).
+  SPRITES: { footY: { back: 30, front: -12 } },
   WORLD: { w: 270, h: 480 },
   TABLE: { x: 25, y: 80, w: 220, h: 320 },
   PHYS:  { step: 1 / 240, maxFrame: 0.25 },

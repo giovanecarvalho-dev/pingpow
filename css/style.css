@@ -166,6 +166,7 @@ footer { position: absolute; bottom: calc(var(--sab) + 10px); display: flex; ali
 .power[data-p="curve"] { --glow: #c08bff; }
 .power[data-p="freeze"] { --glow: #9fe3ff; }
 .power:active { transform: scale(.9); }
+.power .picon { display: block; width: 48px; height: 48px; margin: auto; image-rendering: pixelated; } /* ícone 16×16 em 3× */
 @keyframes pow-in { from { transform: scale(0) rotate(-200deg); } }
 @keyframes pulse { to { transform: scale(1.1); } }
 #btn-pause {
