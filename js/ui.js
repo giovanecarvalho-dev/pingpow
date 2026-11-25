@@ -1,11 +1,12 @@
 // Telas e HUD em DOM.
 import { CONFIG } from './config.js';
+import { drawPortrait } from './render.js';
 
 const { TEXTS, PLAYERS, POWERS } = CONFIG;
 const $ = (id) => document.getElementById(id);
 const screens = { boot: $('screen-boot'), menu: $('screen-menu'), pause: $('screen-pause'), over: $('screen-over') };
 const POWER_ICON = { smash: '🔥', curve: '🌀', freeze: '❄️' };
-const STORE_KEY = 'pingpow.who';
+const STORE_KEY = 'pingpow.who', HINT_KEY = 'pingpow.hint';
 let toastTimer = 0;
 
 export const fill = (tpl, nome) => tpl.replace('{nome}', nome);
@@ -16,10 +17,33 @@ function save(k, v) { try { localStorage.setItem(k, v); } catch { /* sem storage
 
 export function getWho() { const w = load(STORE_KEY); return w === 'b' ? 'b' : 'a'; }
 
+// true só na primeira partida (mostra a dica de arrastar o dedo).
+export function takeHint() { if (load(HINT_KEY)) return false; save(HINT_KEY, '1'); return true; }
+
+// Título com letras que ondulam.
+function splitTitle(el) {
+  el.textContent = '';
+  [...CONFIG.TITLE].forEach((ch, i) => {
+    const s = document.createElement('span');
+    s.textContent = ch === ' ' ? ' ' : ch;
+    s.style.animationDelay = i * 0.08 + 's';
+    el.appendChild(s);
+  });
+}
+
+function portrait(key) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  c.className = 'mini';
+  drawPortrait(c.getContext('2d'), key);
+  return c;
+}
+
 export function initUI(h) {
   document.querySelectorAll('[data-text]').forEach((el) => {
     const k = el.dataset.text;
-    el.textContent = k === 'TITLE' ? CONFIG.TITLE : TEXTS[k];
+    if (k === 'TITLE') splitTitle(el);
+    else el.textContent = TEXTS[k];
   });
   document.title = CONFIG.TITLE;
   $('version').textContent = CONFIG.VERSION_LABEL;
@@ -27,9 +51,12 @@ export function initUI(h) {
   const chips = document.querySelectorAll('[data-who]');
   const mark = () => chips.forEach((c) => c.classList.toggle('on', c.dataset.who === getWho()));
   chips.forEach((c) => {
-    c.textContent = PLAYERS[c.dataset.who].name;
-    c.style.color = PLAYERS[c.dataset.who].color;
-    c.onclick = () => { save(STORE_KEY, c.dataset.who); mark(); };
+    const key = c.dataset.who;
+    const name = document.createElement('span');
+    name.textContent = PLAYERS[key].name;
+    c.append(portrait(key), name);
+    c.style.setProperty('--pc', PLAYERS[key].color);
+    c.onclick = () => { save(STORE_KEY, key); mark(); };
   });
   mark();
 
@@ -46,6 +73,7 @@ export function initUI(h) {
   document.querySelectorAll('.btn-mute').forEach((b) => { b.onclick = () => setMuteIcon(h.mute()); });
   screens.boot.addEventListener('pointerdown', h.boot, { once: true });
   $('btn-hint-close').onclick = () => { $('install-hint').hidden = true; };
+  addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('button')) h.click(); });
 }
 
 export function setMuteIcon(muted) {
@@ -66,36 +94,57 @@ export function setHud(m, visible) {
     const key = m.keys[s];
     $('name-' + s).textContent = m.mode === 'cpu' && s === 1 ? `${playerName(key)} (${TEXTS.cpuName})` : playerName(key);
     $('score-' + s).style.color = PLAYERS[key].color;
+    $('bar-' + s).parentElement.style.setProperty('--pc', PLAYERS[key].color);
   }
 }
 
-// pw: estado dos poderes ({ bar:[n,n], stored:[p|null, p|null] }) ou null
-export function updateHud(m, pw) {
+// pw: estado dos poderes ({ bar:[n,n], stored:[p|null, p|null] }) ou null · cpu: [bool, bool] lados da CPU
+export function updateHud(m, pw, cpu = [false, false]) {
   for (const s of [0, 1]) {
     const sc = $('score-' + s);
     if (sc.textContent !== String(m.score[s])) sc.textContent = m.score[s];
-    const bar = !pw ? 0 : pw.stored[s] ? 1 : pw.bar[s] / POWERS.hitsToFill;
-    $('bar-' + s).style.width = Math.round(bar * 100) + '%';
-    const btn = $('power-' + s);
     const stored = pw && pw.stored[s];
-    const showBtn = !!stored && !(m.mode === 'cpu' && s === 1);
+    const bar = !pw ? 0 : stored ? 1 : pw.bar[s] / POWERS.hitsToFill;
+    const bi = $('bar-' + s);
+    const wd = Math.round(bar * 100) + '%';
+    if (bi.style.width !== wd) bi.style.width = wd;
+    bi.parentElement.classList.toggle('full', !!stored);
+    const btn = $('power-' + s);
+    const showBtn = !!stored && !cpu[s];
     btn.hidden = !showBtn;
     if (showBtn && btn.dataset.p !== stored) { btn.dataset.p = stored; btn.textContent = POWER_ICON[stored]; }
   }
 }
 
-export function toast(text, secs = 1) {
-  for (const s of [0, 1]) { $('toast-' + s).textContent = text; $('toast-' + s).classList.add('show'); }
+export function popScore(side) {
+  const el = $('score-' + side);
+  el.classList.remove('pop');
+  void el.offsetWidth; // reinicia a animação
+  el.classList.add('pop');
+}
+
+// kind: serve | point | match | rally | power-smash | power-curve | power-freeze
+export function toast(text, secs = 1, kind = '', sub = '') {
+  for (const s of [0, 1]) {
+    const el = $('toast-' + s);
+    el.className = 'toast ' + kind;
+    el.textContent = text;
+    if (sub) { const sm = document.createElement('small'); sm.textContent = sub; el.appendChild(sm); }
+    void el.offsetWidth;
+    el.classList.add('show');
+  }
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { for (const s of [0, 1]) $('toast-' + s).classList.remove('show'); }, secs * 1000);
 }
 
-export function showOver(m) {
+export function showOver(m, name) {
   const key = m.keys[m.winner];
-  const name = m.mode === 'cpu' && m.winner === 1 ? `${playerName(key)} (${TEXTS.cpuName})` : playerName(key);
   $('over-msg').textContent = fill(CONFIG.WIN_MESSAGE, name);
   $('over-score').textContent = `${m.score[0]} × ${m.score[1]}`;
-  $('over-portrait').style.background = PLAYERS[key].color;
+  const box = $('over-portrait');
+  box.textContent = '';
+  box.style.setProperty('--pc', PLAYERS[key].color);
+  box.appendChild(portrait(key));
   show('over');
 }
 

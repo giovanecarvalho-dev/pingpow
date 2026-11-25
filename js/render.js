@@ -1,11 +1,14 @@
 // Canvas: mundo em 270×480 desenhado num buffer e escalado sem suavização.
 import { CONFIG } from './config.js';
 import { clamp } from './physics.js';
+import * as fx from './fx.js';
 
-const { WORLD: { w: W, h: H }, TABLE: T, COLORS: C, PADDLE, BALL, PLAYERS } = CONFIG;
+const { WORLD: { w: W, h: H }, TABLE: T, COLORS: C, PADDLE, BALL, PLAYERS, RULES } = CONFIG;
 const buf = document.createElement('canvas');
 buf.width = W; buf.height = H;
 const g = buf.getContext('2d');
+const bg = document.createElement('canvas'); // cenário estático, desenhado uma vez
+bg.width = W; bg.height = H;
 let canvas, ctx;
 const view = { scale: 1, ox: 0, oy: 0, dpr: 1 };
 const trail = [];
@@ -14,10 +17,12 @@ let time = 0;
 export function initRender(c) {
   canvas = c;
   ctx = c.getContext('2d');
+  drawBackground(bg.getContext('2d'));
   resize();
   addEventListener('resize', resize);
   addEventListener('orientationchange', () => setTimeout(resize, 100));
   if (window.visualViewport) visualViewport.addEventListener('resize', resize);
+  if (document.fonts) document.fonts.load('700 16px "Pixelify Sans"').catch(() => {});
 }
 
 export function resize() {
@@ -36,88 +41,231 @@ export function toLogical(cx, cy) {
 }
 
 // Disco "pixelado" (sem anti-aliasing).
-function disc(x, y, r, color) {
-  g.fillStyle = color;
+function disc(x, y, r, color, c = g) {
+  c.fillStyle = color;
   x = Math.round(x); y = Math.round(y);
   for (let dy = -r; dy <= r; dy++) {
     const hw = Math.floor(Math.sqrt(r * r - dy * dy) + 0.3);
-    g.fillRect(x - hw, y + dy, hw * 2 + 1, 1);
+    c.fillRect(x - hw, y + dy, hw * 2 + 1, 1);
   }
 }
 
-function drawTable() {
-  g.fillStyle = C.floor;
-  g.fillRect(0, 0, W, H);
-  g.fillStyle = C.tableDark;
-  g.fillRect(T.x + 3, T.y + 4, T.w, T.h); // "lateral" da mesa
-  g.fillStyle = C.table;
-  g.fillRect(T.x, T.y, T.w, T.h);
-  g.fillStyle = C.line;
-  g.fillRect(T.x, T.y, T.w, 2);
-  g.fillRect(T.x, T.y + T.h - 2, T.w, 2);
-  g.fillRect(T.x, T.y, 2, T.h);
-  g.fillRect(T.x + T.w - 2, T.y, 2, T.h);
-  g.fillRect(T.x + T.w / 2, T.y, 1, T.h);
+// ---------- Cenário (estático) ----------
+function drawBackground(b) {
+  b.fillStyle = C.floor;
+  b.fillRect(0, 0, W, H);
+  b.fillStyle = C.floor2; // piso quadriculado
+  for (let y = 0; y < H; y += 15) for (let x = ((y / 15) % 2) * 15; x < W; x += 30) b.fillRect(x, y, 15, 15);
+  const light = b.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, 300); // holofote + vinheta
+  light.addColorStop(0, 'rgba(255,255,255,.07)');
+  light.addColorStop(0.55, 'rgba(0,0,0,0)');
+  light.addColorStop(1, 'rgba(0,0,0,.5)');
+  b.fillStyle = light;
+  b.fillRect(0, 0, W, H);
+  b.fillStyle = 'rgba(0,0,0,.35)'; // sombra da mesa
+  b.fillRect(T.x + 6, T.y + 8, T.w, T.h);
+  b.fillStyle = C.tableDark; // frente da mesa (espessura)
+  b.fillRect(T.x, T.y + T.h, T.w, 5);
+  b.fillStyle = C.table;
+  b.fillRect(T.x, T.y, T.w, T.h);
+  b.fillStyle = C.tableLight; // brilho suave na metade de cima
+  b.fillRect(T.x + 2, T.y + 2, T.w - 4, 1);
+  for (let i = 0; i < 6; i++) b.fillRect(T.x + 30 + i * 32, T.y + 12 + i * 9, 18, 1);
+  b.fillStyle = C.line;
+  b.fillRect(T.x, T.y, T.w, 2);
+  b.fillRect(T.x, T.y + T.h - 2, T.w, 2);
+  b.fillRect(T.x, T.y, 2, T.h);
+  b.fillRect(T.x + T.w - 2, T.y, 2, T.h);
+  b.fillRect(T.x + T.w / 2, T.y, 1, T.h);
   const ny = T.y + T.h / 2;
-  g.fillStyle = C.netShadow;
-  g.fillRect(T.x - 4, ny + 1, T.w + 8, 3);
-  g.fillStyle = C.net;
-  g.fillRect(T.x - 4, ny - 1, T.w + 8, 2);
-  g.fillRect(T.x - 6, ny - 3, 3, 6);
-  g.fillRect(T.x + T.w + 3, ny - 3, 3, 6);
+  b.fillStyle = C.netShadow;
+  b.fillRect(T.x - 4, ny + 1, T.w + 8, 4);
+  b.fillStyle = C.net;
+  b.fillRect(T.x - 4, ny - 2, T.w + 8, 3);
+  b.fillStyle = 'rgba(0,0,0,.18)'; // trama da rede
+  for (let x = T.x - 4; x < T.x + T.w + 4; x += 2) b.fillRect(x, ny - 1, 1, 1);
+  b.fillStyle = '#cfd3e0'; // postes
+  b.fillRect(T.x - 7, ny - 4, 4, 7);
+  b.fillRect(T.x + T.w + 3, ny - 4, 4, 7);
 }
 
-// Personagem provisória: corpo e cabeça atrás da raquete.
-function drawCharacter(p, key) {
-  const color = PLAYERS[key].color;
-  const dir = p.side === 0 ? 1 : -1; // pra onde fica "atrás"
-  const cx = Math.round(p.x), cy = Math.round(p.y + dir * 18);
+// ---------- Personagens (formas simples, animadas) ----------
+// mood: 'play' | 'happy' | 'win' | 'sad'
+function drawCharacter(p, key, mood) {
+  const P = PLAYERS[key];
+  const back = p.side === 0; // P1 (embaixo) aparece de costas; P2 (em cima), de frente
+  const dir = back ? 1 : -1; // pra onde fica "atrás" da raquete
+  const run = mood === 'play' && Math.abs(p.vx) > 30;
+  const baseY = Math.round(p.y + dir * 21);
+  let x = Math.round(p.x), y = baseY;
+  if (mood === 'win') y -= Math.round(Math.abs(Math.sin(time * 7 + p.side)) * 9);
+  else if (mood === 'happy') y -= Math.round(Math.abs(Math.sin(time * 10)) * 5);
+  else if (mood === 'play') y += Math.round(Math.sin(time * (run ? 18 : 3) + p.side * 2) * (run ? 1 : 0.6));
+  else y += 1;
+  if (p.frozen > 0) x += Math.round(Math.sin(time * 60)); // tremendo de frio
+  const lean = run ? clamp(Math.round(p.vx / 170), -2, 2) : 0;
+
   g.fillStyle = C.shadow;
-  g.fillRect(cx - 8, cy + dir * 4 - 1, 16, 3);
-  g.fillStyle = color;
-  g.fillRect(cx - 6, cy - 6, 12, 12);
-  disc(cx, cy + dir * 9, 5, C.skin);
-  g.fillStyle = color;
-  g.fillRect(cx - 5, cy + dir * 9 + (dir > 0 ? 1 : -5), 10, 4); // cabelo/franja
+  g.fillRect(x - 7, baseY + 8, 14, 3);
+  // pernas (alternam ao correr)
+  const st = run ? Math.round(Math.sin(time * 18)) : 0;
+  g.fillStyle = '#2a2140';
+  g.fillRect(x - 4, y + 5 - Math.max(0, st), 3, 4);
+  g.fillRect(x + 1, y + 5 - Math.max(0, -st), 3, 4);
+  // corpo
+  g.fillStyle = P.color;
+  g.fillRect(x - 6 + lean, y - 6, 12, 11);
+  g.fillStyle = 'rgba(0,0,0,.2)';
+  g.fillRect(x - 6 + lean, y + 4, 12, 1);
+  // braços
+  g.fillStyle = C.skin;
+  if (mood === 'win') { g.fillRect(x - 9 + lean, y - 13, 3, 8); g.fillRect(x + 6 + lean, y - 13, 3, 8); }
+  else if (mood === 'sad') { g.fillRect(x - 8 + lean, y - 4, 2, 7); g.fillRect(x + 6 + lean, y - 4, 2, 7); }
+  else {
+    // braço da raquete vai até o cabo; na rebatida ele "estica"
+    const handY = Math.round(p.y + dir * (PADDLE.h / 2 + 2));
+    const ax = x + 6 + lean - Math.round(p.swing * 3);
+    g.fillRect(ax, Math.min(handY, y - 4), 2, Math.abs(y - 4 - handY) + 1);
+    g.fillRect(x - 8 + lean, y - 4, 2, 6);
+  }
+  // cabeça
+  const hx = x + lean, hy = y - 11 + (mood === 'sad' ? 2 : 0);
+  if (back) {
+    disc(hx, hy, 5, P.hair);
+    g.fillStyle = 'rgba(255,255,255,.18)';
+    g.fillRect(hx - 2, hy - 4, 3, 1);
+    g.fillStyle = P.hair; // rabo de cavalo
+    g.fillRect(hx - 1, hy + 4, 3, 3 + Math.round(Math.abs(Math.sin(time * 8)) * (run ? 2 : 0)));
+  } else {
+    disc(hx, hy, 5, C.skin);
+    g.fillStyle = P.hair;
+    g.fillRect(hx - 5, hy - 6, 11, 4);
+    g.fillRect(hx - 6, hy - 4, 2, 7);
+    g.fillRect(hx + 5, hy - 4, 2, 7);
+    g.fillStyle = '#2a1a2e'; // olhos
+    g.fillRect(hx - 2, hy - 1, 1, 2);
+    g.fillRect(hx + 2, hy - 1, 1, 2);
+    g.fillStyle = '#c0485e'; // boca
+    if (mood === 'sad') g.fillRect(hx - 1, hy + 3, 3, 1);
+    else { g.fillRect(hx - 1, hy + 3, 3, 1); if (mood !== 'play') g.fillRect(hx - 1, hy + 2, 3, 1); }
+  }
+  if (p.frozen > 0) { // gelo por cima
+    g.globalAlpha = 0.45;
+    g.fillStyle = C.freeze;
+    g.fillRect(x - 7 + lean, y - 17, 14, 26);
+    g.globalAlpha = 1;
+  }
 }
 
 function drawPaddle(p, key) {
-  const x = Math.round(p.x - PADDLE.w / 2), y = Math.round(p.y - PADDLE.h / 2);
+  const grow = Math.round(p.swing * 4);
+  const w = PADDLE.w + grow, h = PADDLE.h;
+  let x = Math.round(p.x - w / 2);
+  const y = Math.round(p.y - h / 2);
+  if (p.frozen > 0) x += Math.round(Math.sin(time * 50));
   if (p.armed) {
+    const fire = p.armed === 'smash';
     const pulse = 2 + Math.round((Math.sin(time * 12) + 1) * 1.5);
-    g.globalAlpha = 0.55;
-    g.fillStyle = p.armed === 'smash' ? C.fire : C.curve;
-    g.fillRect(x - pulse, y - pulse, PADDLE.w + pulse * 2, PADDLE.h + pulse * 2);
+    g.globalAlpha = 0.5;
+    g.fillStyle = fire ? C.fire : C.curve;
+    g.fillRect(x - pulse, y - pulse, w + pulse * 2, h + pulse * 2);
     g.globalAlpha = 1;
+    if (Math.random() < 0.6) {
+      fx.burst(x + Math.random() * w, y + (Math.random() < 0.5 ? 0 : h), 1,
+        fire ? [C.fire, C.fire2, C.fire3] : [C.curve, C.curve2, '#fff'],
+        { dir: -Math.PI / 2, spread: 1.2, speed: [15, 45], life: [0.25, 0.5], grav: fire ? -40 : 0 });
+    }
   }
   g.fillStyle = C.shadow;
-  g.fillRect(x + 2, y + 3, PADDLE.w, PADDLE.h);
-  g.fillStyle = p.frozen > 0 ? C.freeze : PLAYERS[key].color;
-  g.fillRect(x, y, PADDLE.w, PADDLE.h);
+  g.fillRect(x + 2, y + 3, w, h);
+  g.fillStyle = C.handle; // cabo, do lado da personagem
+  g.fillRect(Math.round(p.x) - 2, p.side === 0 ? y + h : y - 4, 4, 4);
+  g.fillStyle = p.swing > 0.65 ? '#fff' : p.frozen > 0 ? C.freeze : PLAYERS[key].color;
+  g.fillRect(x + 1, y, w - 2, h);
+  g.fillRect(x, y + 1, w, h - 2);
   g.fillStyle = 'rgba(255,255,255,.45)';
-  g.fillRect(x, y, PADDLE.w, 1);
+  g.fillRect(x + 2, y + 1, w - 4, 1);
+  g.fillStyle = 'rgba(0,0,0,.22)';
+  g.fillRect(x + 1, y + h - 1, w - 2, 1);
   if (p.frozen > 0) {
     g.fillStyle = '#fff';
     for (let i = 0; i < 4; i++) g.fillRect(x + 4 + i * 10, y + ((i + Math.floor(time * 6)) % 2) * 3, 2, 2);
+    g.fillStyle = C.freeze; // pingentes de gelo
+    for (let i = 0; i < 5; i++) g.fillRect(x + 3 + i * 8, y + h, 2, 2 + (i % 2));
+    if (Math.random() < 0.3) fx.burst(x + Math.random() * w, y, 1, ['#fff', C.freeze], { speed: [5, 20], life: [0.3, 0.6] });
   }
 }
 
-function drawBall(b, phase) {
-  if (phase === 'over') return;
-  if (b.smash || b.curve) {
+function drawBall(m) {
+  const b = m.ball;
+  if (m.phase === 'over' || m.phase === 'point') { trail.length = 0; return; } // a bola "explodiu" no ponto
+  const serving = m.phase === 'serve';
+  const z = serving ? Math.abs(Math.sin(time * 8)) * 8 : b.z; // no saque ela quica na mão
+  const fast = b.speed > BALL.maxSpeed * 0.62;
+  if (!serving && (b.smash || b.curve || fast)) {
     trail.push({ x: b.x, y: b.y });
-    if (trail.length > 10) trail.shift();
+    if (trail.length > 9) trail.shift();
   } else trail.length = 0;
   trail.forEach((t, i) => {
     const k = (i + 1) / trail.length;
-    const color = b.smash ? (i % 2 ? C.fire : C.fire2) : C.curve;
-    g.globalAlpha = k * 0.7;
+    const color = b.smash ? (i % 2 ? C.fire : C.fire2) : b.curve ? (i % 2 ? C.curve : C.curve2) : '#ffffff';
+    g.globalAlpha = k * (b.smash || b.curve ? 0.7 : 0.35);
     disc(t.x, t.y, Math.max(1, Math.round(BALL.radius * k)), color);
   });
   g.globalAlpha = 1;
+  // sombra: se afasta da bola quanto mais alta ela está
+  const sx = Math.round(b.x + z * 0.4), sy = Math.round(b.y + 3 + z * 0.8);
   g.fillStyle = C.shadow;
-  g.fillRect(Math.round(b.x - BALL.radius + 2), Math.round(b.y + 3), BALL.radius * 2, 3);
-  disc(b.x, b.y, BALL.radius, C.ball);
+  g.fillRect(sx - 3, sy - 1, 7, 3);
+  g.fillRect(sx - 2, sy - 2, 5, 5);
+  const r = BALL.radius + (z > 9 ? 1 : 0);
+  const col = b.smash ? (Math.floor(time * 24) % 2 ? C.fire2 : '#fff') : b.curve ? '#f3e0ff' : C.ball;
+  disc(b.x, b.y, r, col);
+  g.fillStyle = 'rgba(0,0,0,.18)';
+  g.fillRect(Math.round(b.x) - 1, Math.round(b.y) + r - 1, 3, 1);
+  g.fillStyle = '#fff';
+  g.fillRect(Math.round(b.x) - 2, Math.round(b.y) - 2, 2, 1);
+  if (!serving) {
+    if (b.smash) fx.burst(b.x, b.y, 2, [C.fire, C.fire2, C.fire3], { speed: [8, 35], life: [0.18, 0.4], size: [1, 3], grav: -30 });
+    else if (b.curve && Math.random() < 0.7) fx.burst(b.x, b.y, 1, [C.curve, C.curve2, '#fff'], { speed: [5, 25], life: [0.3, 0.5] });
+  } else {
+    // anel de contagem do saque, na cor de quem saca
+    const k = clamp(m.timer / RULES.serveDelay, 0, 1), rr = 8 + k * 6, n = 20;
+    g.fillStyle = PLAYERS[m.keys[m.server]].color;
+    for (let i = 0; i < Math.ceil(n * k); i++) {
+      const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
+      g.fillRect(Math.round(b.x + Math.cos(a) * rr), Math.round(b.y + Math.sin(a) * rr), 1, 1);
+    }
+  }
+}
+
+// Retrato 32×32 (menu e vitória): busto de frente, no mesmo estilo provisório das personagens.
+export function drawPortrait(c, key) {
+  const P = PLAYERS[key];
+  c.clearRect(0, 0, 32, 32);
+  c.fillStyle = P.color;
+  c.fillRect(6, 24, 20, 8);
+  c.fillStyle = C.skin;
+  c.fillRect(13, 21, 6, 4);
+  disc(16, 14, 9, P.hair, c);
+  if (key === 'b') disc(16, 4, 4, P.hair, c); // coque
+  disc(16, 15, 7, C.skin, c);
+  c.fillStyle = P.hair;
+  c.fillRect(9, 6, 14, 4);
+  c.fillRect(7, 9, 3, key === 'b' ? 7 : 13);
+  c.fillRect(22, 9, 3, key === 'b' ? 7 : 13);
+  c.fillStyle = '#2a1a2e';
+  c.fillRect(12, 14, 2, 3);
+  c.fillRect(18, 14, 2, 3);
+  c.fillStyle = '#fff';
+  c.fillRect(12, 14, 1, 1);
+  c.fillRect(18, 14, 1, 1);
+  c.fillStyle = '#ff9db5';
+  c.fillRect(10, 18, 2, 1);
+  c.fillRect(20, 18, 2, 1);
+  c.fillStyle = '#c0485e';
+  c.fillRect(14, 19, 4, 1);
+  c.fillRect(15, 20, 2, 1);
 }
 
 function drawHitboxes(m) {
@@ -128,24 +276,36 @@ function drawHitboxes(m) {
   g.strokeRect(m.ball.x - BALL.radius + 0.5, m.ball.y - BALL.radius + 0.5, BALL.radius * 2 - 1, BALL.radius * 2 - 1);
 }
 
+function moodOf(m, s) {
+  if (m.phase === 'over') return m.winner === s ? 'win' : 'sad';
+  if (m.phase === 'point') return m.lastScorer === s ? 'happy' : 'sad';
+  return 'play';
+}
+
 export function draw(m, dt) {
   time += dt;
-  drawTable();
+  fx.update(dt);
+  g.drawImage(bg, 0, 0);
   if (m) {
     const [p1, p2] = m.paddles;
-    drawCharacter(p2, m.keys[1]);
+    drawCharacter(p2, m.keys[1], moodOf(m, 1));
     drawPaddle(p2, m.keys[1]);
-    drawBall(m.ball, m.phase);
-    drawCharacter(p1, m.keys[0]);
+    drawBall(m);
+    drawCharacter(p1, m.keys[0], moodOf(m, 0));
     drawPaddle(p1, m.keys[0]);
     if (CONFIG.DEBUG) drawHitboxes(m);
   }
-  // Tela: fundo nas faixas + buffer escalado.
+  fx.draw(g);
+  fx.drawFlash(g);
+  // Tela: fundo nas faixas + buffer escalado (com tremor e zoom da câmera).
+  const cam = fx.camera();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = C.floor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false;
   const s = view.scale * view.dpr;
-  ctx.drawImage(buf, Math.round(view.ox * view.dpr), Math.round(view.oy * view.dpr), Math.round(W * s), Math.round(H * s));
+  const sw = W / cam.zoom, sh = H / cam.zoom;
+  const sx = clamp(cam.fx - sw / 2, 0, W - sw), sy = clamp(cam.fy - sh / 2, 0, H - sh);
+  ctx.drawImage(buf, sx, sy, sw, sh,
+    Math.round(view.ox * view.dpr + cam.dx * s), Math.round(view.oy * view.dpr + cam.dy * s), Math.round(W * s), Math.round(H * s));
 }
-

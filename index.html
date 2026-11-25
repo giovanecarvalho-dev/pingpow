@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="./assets/icons/icon-180.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <title>PING POW!</title>
+<link rel="preload" href="./assets/fonts/PixelifySans.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
@@ -27,8 +28,8 @@
       <div class="bar"><i id="bar-0"></i></div></div>
     <button class="power" id="power-0" hidden></button>
   </div>
-  <div class="toast" id="toast-1"></div>
-  <div class="toast" id="toast-0"></div>
+  <div class="toast-wrap" id="tw-1"><div class="toast" id="toast-1"></div></div>
+  <div class="toast-wrap" id="tw-0"><div class="toast" id="toast-0"></div></div>
   <button id="btn-pause" aria-label="Pausar">⏸</button>
 </div>
 
@@ -63,7 +64,7 @@
 </section>
 
 <section class="screen dim" id="screen-over" hidden>
-  <div class="portrait" id="over-portrait"></div>
+  <div class="hero"><div class="rays"></div><div class="portrait" id="over-portrait"></div></div>
   <h2 id="over-msg"></h2>
   <p class="label" id="over-score"></p>
   <button class="big" id="btn-rematch" data-text="rematch"></button>

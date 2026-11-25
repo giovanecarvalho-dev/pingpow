@@ -1,7 +1,7 @@
 // Bola, raquetes e colisões.
 import { CONFIG } from './config.js';
 
-const { BALL, PADDLE, TABLE, POWERS, RULES } = CONFIG;
+const { BALL, PADDLE, TABLE, POWERS, RULES, FX } = CONFIG;
 const DEG = Math.PI / 180;
 export const LEFT = TABLE.x, RIGHT = TABLE.x + TABLE.w, CENTER_X = TABLE.x + TABLE.w / 2;
 // lado 0 = P1 (embaixo), lado 1 = P2 (em cima)
@@ -12,11 +12,12 @@ const PMIN = LEFT + 6, PMAX = RIGHT - 6;
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export function createPaddle(side) {
-  return { side, x: CENTER_X, y: PADDLE_Y[side], vx: 0, target: CENTER_X, speedMul: 1, frozen: 0, armed: null };
+  return { side, x: CENTER_X, y: PADDLE_Y[side], vx: 0, target: CENTER_X, speedMul: 1, frozen: 0, armed: null, swing: 0 };
 }
 
 export function stepPaddle(p, dt) {
   if (p.frozen > 0) p.frozen = Math.max(0, p.frozen - dt);
+  if (p.swing > 0) p.swing = Math.max(0, p.swing - dt * 5); // animação da rebatida
   const max = PADDLE.maxSpeed * p.speedMul * (p.frozen > 0 ? POWERS.freezeFactor : 1) * dt;
   const d = clamp(clamp(p.target, PMIN, PMAX) - p.x, -max, max);
   p.x += d;
@@ -24,7 +25,26 @@ export function stepPaddle(p, dt) {
 }
 
 export function createBall() {
-  return { x: CENTER_X, y: 0, vx: 0, vy: 0, speed: BALL.startSpeed, curve: 0, smash: false };
+  return { x: CENTER_X, y: 0, vx: 0, vy: 0, speed: BALL.startSpeed, curve: 0, smash: false,
+           z: 0, y0: 0, ty: 0, arc: 0, bounced: true }; // z = altura falsa (só visual)
+}
+
+// Começa um voo: a bola sobe em arco, quica uma vez no lado da recebedora e sobe até a raquete dela.
+function startFlight(b, from) {
+  b.y0 = b.y;
+  b.ty = PADDLE_Y[1 - from];
+  const k = clamp((b.speed - BALL.startSpeed) / (BALL.maxSpeed - BALL.startSpeed), 0, 1);
+  b.arc = FX.arc[0] + (FX.arc[1] - FX.arc[0]) * k;
+  b.bounced = false;
+}
+
+function updateHeight(b, ev) {
+  const span = b.ty - b.y0, a = FX.bounceAt;
+  const u = span ? (b.y - b.y0) / span : 1;
+  if (u < a) { const s = u / a; b.z = 5 * (1 - s) + b.arc * 4 * s * (1 - s); return; }
+  if (!b.bounced) { b.bounced = true; ev.push({ type: 'bounce', x: b.x, y: b.y }); }
+  const s = (u - a) / (1 - a);
+  b.z = s <= 1 ? 6 * (1 - (1 - s) * (1 - s)) : Math.max(0, 6 - (s - 1) * 30);
 }
 
 // Garante componente vertical mínima, pra bola não ficar presa entre as laterais.
@@ -44,6 +64,7 @@ export function launchBall(b, server) {
   b.vx = Math.sin(ang) * b.speed;
   b.vy = dir * Math.cos(ang) * b.speed;
   b.curve = 0; b.smash = false;
+  startFlight(b, server);
 }
 
 function hit(b, p) {
@@ -70,6 +91,8 @@ function hit(b, p) {
   }
   keepVertical(b);
   b.y = p.y + up * (PADDLE.h / 2 + BALL.radius + 0.5);
+  p.swing = 1;
+  startFlight(b, p.side);
   return armed;
 }
 
@@ -84,15 +107,16 @@ export function stepBall(b, paddles, dt, ev) {
   }
   b.x += b.vx * dt;
   b.y += b.vy * dt;
-  if (b.x - r < LEFT) { b.x = LEFT + r; b.vx = Math.abs(b.vx); if (b.curve < 0) b.curve = -b.curve; ev.push({ type: 'wall' }); }
-  else if (b.x + r > RIGHT) { b.x = RIGHT - r; b.vx = -Math.abs(b.vx); if (b.curve > 0) b.curve = -b.curve; ev.push({ type: 'wall' }); }
+  if (b.x - r < LEFT) { b.x = LEFT + r; b.vx = Math.abs(b.vx); if (b.curve < 0) b.curve = -b.curve; ev.push({ type: 'wall', x: LEFT, y: b.y }); }
+  else if (b.x + r > RIGHT) { b.x = RIGHT - r; b.vx = -Math.abs(b.vx); if (b.curve > 0) b.curve = -b.curve; ev.push({ type: 'wall', x: RIGHT, y: b.y }); }
+  updateHeight(b, ev);
 
   for (const p of paddles) {
     const toward = p.side === 0 ? b.vy > 0 : b.vy < 0; // só conta indo na direção dela
     if (!toward) continue;
     if (Math.abs(b.x - p.x) <= PADDLE.w / 2 + r && Math.abs(b.y - p.y) <= PADDLE.h / 2 + r) {
       const power = hit(b, p);
-      ev.push({ type: 'hit', side: p.side, power });
+      ev.push({ type: 'hit', side: p.side, power, x: b.x, y: p.y, speed: b.speed });
     }
   }
   if (b.y > OUT_Y[0]) return 0;

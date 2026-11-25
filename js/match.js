@@ -14,9 +14,9 @@ export function createMatch(mode, keys, level = 'normal') {
     lastScorer: -1, winner: -1,
     ball: createBall(),
     paddles: [createPaddle(0), createPaddle(1)],
-    events: [],
+    events: [], rally: 0,
   };
-  m.events.push({ type: 'serve', side: first });
+  m.events.push({ type: 'serve', side: first, mp: -1 });
   return m;
 }
 
@@ -29,6 +29,12 @@ function placeOnServer(m) {
 
 export function isWin(a, b) {
   return a >= RULES.pointsToWin && a - b >= RULES.winBy;
+}
+
+// Lado que fecha a partida se marcar o próximo ponto (-1 = ninguém).
+export function matchPointSide(m) {
+  const [a, b] = m.score;
+  return isWin(a + 1, b) ? 0 : isWin(b + 1, a) ? 1 : -1;
 }
 
 export function updateMatch(m, dt) {
@@ -44,13 +50,17 @@ export function updateMatch(m, dt) {
     }
   } else if (m.phase === 'rally') {
     const lost = stepBall(m.ball, m.paddles, dt, m.events);
+    for (const e of m.events) if (e.type === 'hit') e.rally = ++m.rally;
     if (lost >= 0) {
       const scorer = 1 - lost;
       m.score[scorer]++;
       m.lastScorer = scorer;
+      const rally = m.rally;
+      m.rally = 0;
+      const final = isWin(m.score[scorer], m.score[lost]);
       m.phase = 'point';
-      m.timer = RULES.pointPause;
-      m.events.push({ type: 'point', side: scorer });
+      m.timer = final ? RULES.finalPause : RULES.pointPause;
+      m.events.push({ type: 'point', side: scorer, x: m.ball.x, y: m.ball.y, final, rally });
     }
   } else if (m.phase === 'point') {
     m.timer -= dt;
@@ -66,7 +76,7 @@ export function updateMatch(m, dt) {
         m.phase = 'serve';
         m.timer = RULES.serveDelay;
         m.ball.curve = 0; m.ball.smash = false;
-        m.events.push({ type: 'serve', side: m.server });
+        m.events.push({ type: 'serve', side: m.server, mp: matchPointSide(m) });
       }
     }
   }

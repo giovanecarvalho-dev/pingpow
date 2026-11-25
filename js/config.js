@@ -7,13 +7,14 @@ export const CONFIG = {
   TITLE: 'PING POW!', // nome provisório, a cliente pode trocar
   DEBUG,
   PLAYERS: {
-    a: { name: 'Jogadora A', color: '#ff5d8f' }, // trocar pelos nomes reais
-    b: { name: 'Jogadora B', color: '#4cc9f0' },
+    a: { name: 'Jogadora A', color: '#ff5d8f', hair: '#4a2a1a' }, // trocar pelos nomes reais
+    b: { name: 'Jogadora B', color: '#4cc9f0', hair: '#1e1726' },
   },
   WIN_MESSAGE: '{nome} venceu! 🏆',
   RULES: {
     pointsToWin: DEBUG ? 3 : 11, winBy: 2, serveEvery: 2,
     serveDelay: 1, serveMaxDeg: 20, pointPause: 0.8,
+    finalPause: 1.8, // pausa depois do ponto que fecha a partida (comemoração)
   },
   BALL:   { radius: 4, startSpeed: 170, speedUp: 1.05, maxSpeed: 420, minVyFrac: 0.35 }, // px lógicos/s
   PADDLE: { w: 40, h: 6, maxSpeed: 520, maxBounceDeg: 60, spin: 0.15,
@@ -22,22 +23,37 @@ export const CONFIG = {
   POWERS: { hitsToFill: 5, smashMult: 1.8, smashCapMult: 1.3,
             curveAccel: 220, freezeFactor: 0.35, freezeSecs: 2 },
   CPU: {
-    easy:   { speed: 0.55, errorPx: 18, delay: 0.25 },
-    normal: { speed: 0.75, errorPx: 10, delay: 0.15 },
-    hard:   { speed: 0.95, errorPx: 4,  delay: 0.08 },
+    // aim: chance de mirar longe da adversária · aimMax: quanto da ponta da raquete ela arrisca usar
+    // miss: chance de "vacilo" por jogada (calcula errado e perde a bola, como gente)
+    easy:   { speed: 0.55, errorPx: 18, delay: 0.25, aim: 0.15, aimMax: 0.35, miss: 0.14 },
+    normal: { speed: 0.75, errorPx: 10, delay: 0.15, aim: 0.55, aimMax: 0.6,  miss: 0.07 },
+    hard:   { speed: 0.95, errorPx: 4,  delay: 0.08, aim: 0.9,  aimMax: 0.8,  miss: 0.025 },
     powerDelay: [0.5, 2],  // s até usar o poder recebido
     returnSpeed: 0.35,     // fração da velocidade ao voltar pro centro
     errorSpeedExp: 1.7,    // erro × (velocidade/inicial)^exp — bola rápida engana mais
+    rubber: 0.12,          // erro ±12% por ponto de vantagem (até 3): partidas mais disputadas
+    demoLevel: 'easy',     // CPU × CPU no fundo do menu
   },
+  FX: {
+    hitStop: 0.035, smashStop: 0.11, pointStop: 0.07, // pausas de impacto (s)
+    shakeHit: 1.2, shakeSmash: 7, shakePoint: 4, shakeFinal: 9, // tremor (px lógicos)
+    slowMo: 0.3, slowZoom: 1.3, // câmera lenta + zoom no ponto que fecha a partida
+    bounceAt: 0.68,             // fração do caminho em que a bola quica na mesa
+    arc: [13, 4],               // altura do arco da bola: lenta → rápida
+    rallyEvery: 10,             // aviso a cada N rebatidas seguidas
+    confetti: 160,
+  },
+  AUDIO: { sfx: 0.9, music: 0.4, matchPointRate: 1.12 },
   WORLD: { w: 270, h: 480 },
   TABLE: { x: 25, y: 80, w: 220, h: 320 },
   PHYS:  { step: 1 / 240, maxFrame: 0.25 },
   COLORS: {
-    bg: '#1d1a3a', floor: '#262150', table: '#1f7a5a', tableDark: '#18624a',
-    line: '#e9fff4', net: '#f4f4f4', netShadow: 'rgba(0,0,0,.3)',
+    bg: '#1d1a3a', floor: '#262150', floor2: '#2b2559', table: '#1f7a5a', tableDark: '#18624a',
+    tableLight: '#248a66', line: '#e9fff4', net: '#f4f4f4', netShadow: 'rgba(0,0,0,.3)',
     ball: '#fff6d8', shadow: 'rgba(0,0,0,.35)',
-    freeze: '#9fe3ff', fire: '#ff8a1f', fire2: '#ffd23f', curve: '#c08bff',
-    skin: '#f2c6a0',
+    freeze: '#9fe3ff', fire: '#ff8a1f', fire2: '#ffd23f', fire3: '#ff3d2e', curve: '#c08bff', curve2: '#ff7ad9',
+    skin: '#f2c6a0', handle: '#b07040',
+    confetti: ['#ff5d8f', '#4cc9f0', '#ffd23f', '#7cf29a', '#c08bff', '#ffffff'],
   },
   TEXTS: {
     tapToPlay: 'Toque para jogar',
@@ -50,5 +66,10 @@ export const CONFIG = {
     rotate: 'Gire o celular 📱',
     install: 'Para jogar em tela cheia: Compartilhar → Adicionar à Tela de Início',
     cpuName: 'CPU',
+    matchPoint: 'MATCH POINT!',
+    rally: '{n} rebatidas seguidas!',
+    pow: 'POW!',
+    dragHint: 'Arraste o dedo pra mover a raquete',
+    powerNames: { smash: '🔥 SMASH DE FOGO!', curve: '🌀 BOLA CURVA!', freeze: '❄️ CONGELOU!' },
   },
 };
