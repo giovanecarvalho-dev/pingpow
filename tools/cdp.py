@@ -5,6 +5,7 @@
 #         ["tap",x,y] ["tapsel","seletor"] ["drag","seletor",de,ate] ["shot","nome"] ["reload"]
 #         ["save","expr js","arquivo"] (grava o valor) · ["typefile","seletor","arquivo",timeout] (espera o arquivo e digita)
 #         ["sh","comando"] (roda no shell, ex.: derrubar o servidor pra testar o offline)
+#         ["cdp","Metodo.doDevTools",{params}] (ex.: ["cdp","Network.emulateNetworkConditions",{"offline":true,...}])
 # Expressões podem devolver Promise (são aguardadas). Sai com código 1 se um "until" estourar ou um "expect" falhar.
 # Dois Chromes ao mesmo tempo (ex.: host e convidada do online): CDP_PORT=9334 numa das execuções.
 import json, sys, time, base64, subprocess, urllib.request, urllib.parse, os, shutil, socket, struct
@@ -133,6 +134,8 @@ try:
                 print('typed', txt)
             elif k == 'sh':
                 subprocess.run(st[1], shell=True); print('sh', st[1][:60])
+            elif k == 'cdp':
+                print('cdp', st[1], call(st[1], **(st[2] if len(st) > 2 else {})))
             elif k == 'reload':
                 call('Page.reload', ignoreCache=False); time.sleep(1.5); print('reload')
             elif k == 'shot':
