@@ -1,0 +1,107 @@
+:root {
+  --bg: #1d1a3a;
+  --fg: #fff;
+  --accent: #ffd23f;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 600 16px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  touch-action: none; overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+body { position: fixed; inset: 0; overflow: hidden; }
+[hidden] { display: none !important; }
+canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+
+button {
+  font: inherit; color: inherit; border: 0; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Telas ---------- */
+.screen {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+  padding: calc(var(--sat) + 16px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
+  background: var(--bg); text-align: center;
+}
+.screen.dim { background: rgba(20, 16, 45, .82); }
+.title {
+  margin: 0 0 12px; font-size: clamp(40px, 13vw, 64px); font-weight: 900; letter-spacing: 2px;
+  color: var(--accent); text-shadow: 4px 4px 0 #ff5d8f, 8px 8px 0 #4cc9f0;
+}
+h2 { margin: 0; font-size: 28px; }
+.label { margin: 4px 0 0; opacity: .85; }
+.blink { animation: blink 1.1s steps(2) infinite; font-size: 20px; }
+@keyframes blink { 50% { opacity: .2; } }
+.row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.big {
+  width: min(280px, 80vw); padding: 14px; border-radius: 14px; font-size: 20px;
+  background: #3b3478; box-shadow: 0 4px 0 #15122c;
+}
+.big:active { transform: translateY(3px); box-shadow: 0 1px 0 #15122c; }
+.big:disabled { opacity: .45; }
+.big small { font-size: 13px; opacity: .8; }
+.chip { padding: 10px 16px; border-radius: 999px; background: #2c2760; border: 3px solid transparent; }
+.chip.on { border-color: var(--accent); background: #463e8f; }
+.icon { background: transparent; font-size: 24px; padding: 6px 10px; }
+footer { position: absolute; bottom: calc(var(--sab) + 10px); display: flex; align-items: center; gap: 10px; opacity: .8; font-size: 14px; }
+.portrait { width: 96px; height: 96px; border-radius: 16px; border: 4px solid #fff; image-rendering: pixelated; }
+
+/* ---------- HUD ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; }
+#hud button { pointer-events: auto; }
+.side {
+  position: absolute; left: 0; right: 0; display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 8px calc(var(--sar) + 10px) calc(var(--sab) + 8px) calc(var(--sal) + 10px);
+}
+#hud-p1 { bottom: 0; }
+#hud-p2 { top: 0; flex-direction: row; align-items: flex-start; padding-top: calc(var(--sat) + 8px); padding-bottom: 8px; }
+/* No modo local, o HUD da P2 fica girado 180° (o celular fica deitado na mesa). */
+#hud.local #hud-p2 { transform: rotate(180deg); align-items: flex-end;
+  padding-top: 8px; padding-bottom: calc(var(--sat) + 8px); }
+.info { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; max-width: 60%; text-shadow: 2px 2px 0 #000; }
+.score { font-size: 34px; font-weight: 900; }
+.name { font-size: 14px; opacity: .9; }
+.bar { flex-basis: 100%; width: 90px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.2); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.power {
+  width: 64px; height: 64px; border-radius: 50%; font-size: 32px;
+  background: #fff; box-shadow: 0 0 0 4px var(--accent), 0 0 18px var(--accent);
+  animation: pulse .8s ease-in-out infinite alternate;
+}
+@keyframes pulse { to { transform: scale(1.08); } }
+#btn-pause {
+  position: absolute; right: calc(var(--sar) + 6px); top: 50%; transform: translateY(-50%);
+  width: 40px; height: 40px; border-radius: 10px; background: rgba(0,0,0,.35); font-size: 18px;
+}
+.toast {
+  position: absolute; left: 0; right: 0; text-align: center; font-size: 22px; font-weight: 900;
+  text-shadow: 2px 2px 0 #000; opacity: 0; transition: opacity .15s;
+}
+.toast.show { opacity: 1; }
+#toast-0 { top: 62%; }
+#toast-1 { top: 33%; }
+#hud.local #toast-1 { transform: rotate(180deg); }
+#hud:not(.local) #toast-1 { display: none; }
+#hud:not(.local) #toast-0 { top: 46%; }
+
+/* ---------- Avisos ---------- */
+#rotate {
+  position: absolute; inset: 0; z-index: 50; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+#install-hint {
+  position: absolute; z-index: 40; left: 12px; right: 12px; bottom: calc(var(--sab) + 12px);
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px;
+  background: #fff; color: #222; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+#install-hint .icon { color: #222; font-size: 18px; }
+#fps { position: absolute; z-index: 60; left: calc(var(--sal) + 4px); top: calc(var(--sat) + 40%); font: 12px monospace; color: #0f0; }

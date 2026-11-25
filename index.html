@@ -3,10 +3,77 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PING POW!">
+<meta name="theme-color" content="#1d1a3a">
+<link rel="apple-touch-icon" href="./assets/icons/icon-180.png">
+<link rel="manifest" href="./manifest.webmanifest">
 <title>PING POW!</title>
 <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
-<h1>PING POW! — Fase 0 ok 🏓</h1>
+<canvas id="game"></canvas>
+
+<div id="hud" hidden>
+  <div class="side" id="hud-p2">
+    <div class="info"><span class="score" id="score-1">0</span><span class="name" id="name-1"></span>
+      <div class="bar"><i id="bar-1"></i></div></div>
+    <button class="power" id="power-1" hidden></button>
+  </div>
+  <div class="side" id="hud-p1">
+    <div class="info"><span class="score" id="score-0">0</span><span class="name" id="name-0"></span>
+      <div class="bar"><i id="bar-0"></i></div></div>
+    <button class="power" id="power-0" hidden></button>
+  </div>
+  <div class="toast" id="toast-1"></div>
+  <div class="toast" id="toast-0"></div>
+  <button id="btn-pause" aria-label="Pausar">⏸</button>
+</div>
+
+<section class="screen" id="screen-boot">
+  <h1 class="title" data-text="TITLE"></h1>
+  <p class="blink" data-text="tapToPlay"></p>
+</section>
+
+<section class="screen" id="screen-menu" hidden>
+  <h1 class="title" data-text="TITLE"></h1>
+  <p class="label" data-text="whoAreYou"></p>
+  <div class="row" id="who">
+    <button class="chip" data-who="a"></button>
+    <button class="chip" data-who="b"></button>
+  </div>
+  <button class="big" id="btn-local" data-text="local"></button>
+  <button class="big" id="btn-cpu" data-text="cpu"></button>
+  <div class="row" id="cpu-levels" hidden>
+    <button class="chip" data-level="easy" data-text="easy"></button>
+    <button class="chip" data-level="normal" data-text="normal"></button>
+    <button class="chip" data-level="hard" data-text="hard"></button>
+  </div>
+  <button class="big" id="btn-online" disabled><span data-text="online"></span> <small data-text="soon"></small></button>
+  <footer><button class="icon btn-mute" aria-label="Som">🔊</button><span id="version"></span></footer>
+</section>
+
+<section class="screen dim" id="screen-pause" hidden>
+  <h2 data-text="paused"></h2>
+  <button class="big" id="btn-resume" data-text="resume"></button>
+  <button class="big" id="btn-pause-menu" data-text="menu"></button>
+  <button class="icon btn-mute" aria-label="Som">🔊</button>
+</section>
+
+<section class="screen dim" id="screen-over" hidden>
+  <div class="portrait" id="over-portrait"></div>
+  <h2 id="over-msg"></h2>
+  <p class="label" id="over-score"></p>
+  <button class="big" id="btn-rematch" data-text="rematch"></button>
+  <button class="big" id="btn-over-menu" data-text="menu"></button>
+</section>
+
+<div id="rotate" hidden><p data-text="rotate"></p></div>
+<div id="install-hint" hidden><span data-text="install"></span><button class="icon" id="btn-hint-close" aria-label="Fechar">✕</button></div>
+<div id="fps" hidden></div>
+
+<script type="module" src="./js/main.js"></script>
 </body>
 </html>
