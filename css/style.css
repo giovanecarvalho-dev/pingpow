@@ -90,6 +90,24 @@ h2 { margin: 0; font-size: 30px; text-shadow: 3px 3px 0 #000; }
 .icon { background: transparent; font-size: 24px; padding: 6px 10px; }
 footer { position: absolute; bottom: calc(var(--sab) + 10px); display: flex; align-items: center; gap: 10px; opacity: .85; font-size: 14px; }
 
+/* ---------- Som ---------- */
+.vol { width: min(300px, 84vw); display: grid; grid-template-columns: 1fr auto; align-items: center; row-gap: 10px; text-align: left; margin-bottom: 8px; }
+.vol .lbl { font-size: 20px; text-shadow: 2px 2px 0 #000; }
+.vol .val { font-size: 18px; color: var(--accent); text-shadow: 2px 2px 0 #000; }
+.vol .track {
+  grid-column: 1 / -1; position: relative; height: 22px; border-radius: 6px; cursor: pointer; touch-action: none;
+  background: #2c2760; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+}
+.vol .track::before { content: ''; position: absolute; inset: -14px -12px; } /* área de toque maior */
+.vol .track i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px 0 0 3px; background: linear-gradient(90deg, var(--pink), var(--accent)); }
+.vol .track b {
+  position: absolute; top: 50%; width: 26px; height: 32px; margin: -16px 0 0 -13px; border-radius: 6px;
+  background: linear-gradient(#fff, #d9d4ff); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+}
+.vol .track:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+#screen-sound.muted .vol { opacity: .45; }
+#btn-mute { background: linear-gradient(#5d5480, #463e6b); }
+
 /* ---------- Vitória ---------- */
 .hero { position: relative; width: 112px; height: 112px; margin-bottom: 8px; }
 .rays {

@@ -4,10 +4,10 @@ import { drawPortrait } from './render.js';
 
 const { TEXTS, PLAYERS, POWERS } = CONFIG;
 const $ = (id) => document.getElementById(id);
-const screens = { boot: $('screen-boot'), menu: $('screen-menu'), pause: $('screen-pause'), over: $('screen-over') };
+const screens = { boot: $('screen-boot'), menu: $('screen-menu'), pause: $('screen-pause'), over: $('screen-over'), sound: $('screen-sound') };
 const POWER_ICON = { smash: '🔥', curve: '🌀', freeze: '❄️' };
 const STORE_KEY = 'pingpow.who', HINT_KEY = 'pingpow.hint';
-let toastTimer = 0;
+let toastTimer = 0, soundBack = 'menu';
 
 export const fill = (tpl, nome) => tpl.replace('{nome}', nome);
 export const playerName = (key) => PLAYERS[key].name;
@@ -29,6 +29,28 @@ function splitTitle(el) {
     s.style.animationDelay = i * 0.08 + 's';
     el.appendChild(s);
   });
+}
+
+// Controle de volume (0 a 100%, de 5 em 5): arrastar, tocar ou setas do teclado.
+function initSlider(el, h) {
+  const kind = el.dataset.kind, track = el.querySelector('.track');
+  const bar = track.querySelector('i'), knob = track.querySelector('b'), val = el.querySelector('.val');
+  track.setAttribute('aria-label', TEXTS[kind]);
+  const render = (v) => {
+    const p = Math.round(v * 100) + '%';
+    bar.style.width = knob.style.left = val.textContent = p;
+    track.setAttribute('aria-valuenow', Math.round(v * 100));
+  };
+  const set = (v) => { v = Math.round(Math.min(1, Math.max(0, v)) * 20) / 20; h.setVolume(kind, v); render(v); };
+  const fromX = (x) => { const r = track.getBoundingClientRect(); set((x - r.left) / r.width); };
+  track.addEventListener('pointerdown', (e) => { track.setPointerCapture(e.pointerId); fromX(e.clientX); });
+  track.addEventListener('pointermove', (e) => { if (track.hasPointerCapture(e.pointerId)) fromX(e.clientX); });
+  track.addEventListener('pointerup', () => h.preview(kind));
+  track.addEventListener('keydown', (e) => {
+    const d = { ArrowRight: 0.05, ArrowUp: 0.05, ArrowLeft: -0.05, ArrowDown: -0.05 }[e.key];
+    if (d) { e.preventDefault(); e.stopPropagation(); set(h.getVolume(kind) + d); h.preview(kind); }
+  });
+  render(h.getVolume(kind));
 }
 
 function portrait(key) {
@@ -70,14 +92,21 @@ export function initUI(h) {
   $('btn-rematch').onclick = h.rematch;
   $('power-0').onclick = () => h.power(0);
   $('power-1').onclick = () => h.power(1);
-  document.querySelectorAll('.btn-mute').forEach((b) => { b.onclick = () => setMuteIcon(h.mute()); });
+  document.querySelectorAll('.btn-sound').forEach((b) => {
+    b.onclick = () => { soundBack = screens.pause.hidden ? 'menu' : 'pause'; show('sound'); h.soundPanel(true); };
+  });
+  $('btn-sound-ok').onclick = () => { show(soundBack); h.soundPanel(false); };
+  $('btn-mute').onclick = () => setMuteIcon(h.mute());
+  document.querySelectorAll('.vol').forEach((el) => initSlider(el, h));
   screens.boot.addEventListener('pointerdown', h.boot, { once: true });
   $('btn-hint-close').onclick = () => { $('install-hint').hidden = true; };
   addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('button')) h.click(); });
 }
 
 export function setMuteIcon(muted) {
-  document.querySelectorAll('.btn-mute').forEach((b) => { b.textContent = muted ? '🔇' : '🔊'; });
+  document.querySelectorAll('.btn-sound').forEach((b) => { b.textContent = muted ? '🔇' : '🔊'; });
+  $('btn-mute').textContent = muted ? TEXTS.unmute : TEXTS.mute;
+  $('screen-sound').classList.toggle('muted', muted);
 }
 
 export function show(name) {

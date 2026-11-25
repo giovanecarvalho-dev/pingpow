@@ -43,7 +43,16 @@ export const CONFIG = {
     rallyEvery: 10,             // aviso a cada N rebatidas seguidas
     confetti: 160,
   },
-  AUDIO: { sfx: 0.9, music: 0.4, matchPointRate: 1.12 },
+  AUDIO: {
+    music: 0.28, sfx: 1,              // volume de cada trilha em 100% nos controles
+    defaultMusic: 0.8, defaultSfx: 1, // posição inicial dos controles (0 a 1)
+    matchPointRate: 1.12,             // música acelera no match point
+    // Volume de cada efeito, acertado por loudness (LUFS), não por pico: os jingles 8-bit
+    // (onda quadrada contínua) soavam ~13 dB acima da rebatida.
+    mix: { hit: 1, bounce: 0.55, wall: 0.45, serve: 0.75, smash: 0.8, point: 0.27, matchPoint: 0.3,
+           ready: 0.24, rally: 0.19, fire: 0.43, curve: 0.53, freeze: 0.41, ice: 0.3, lose: 0.34,
+           click: 0.5, applause: 1.6, applauseFinal: 2.9 },
+  },
   WORLD: { w: 270, h: 480 },
   TABLE: { x: 25, y: 80, w: 220, h: 320 },
   PHYS:  { step: 1 / 240, maxFrame: 0.25 },
@@ -71,5 +80,7 @@ export const CONFIG = {
     pow: 'POW!',
     dragHint: 'Arraste o dedo pra mover a raquete',
     powerNames: { smash: '🔥 SMASH DE FOGO!', curve: '🌀 BOLA CURVA!', freeze: '❄️ CONGELOU!' },
+    sound: 'Som', music: '🎵 Música', sfx: '💥 Efeitos',
+    mute: '🔇 Silenciar tudo', unmute: '🔊 Ligar o som', done: 'Pronto',
   },
 };

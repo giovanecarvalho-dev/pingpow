@@ -3,6 +3,7 @@
 import { CONFIG } from './config.js';
 
 const { AUDIO, BALL } = CONFIG;
+const MIX = AUDIO.mix;
 const DIR = './assets/audio/';
 const FILES = {
   hit1: 'hit1.wav', hit2: 'hit2.wav', hit3: 'hit3.wav', wall: 'wall.wav', smash: 'smash.wav',
@@ -13,10 +14,16 @@ const FILES = {
 };
 const buffers = {};
 let ac = null, master = null, sfxBus = null, musicBus = null;
-let muted = false;
+let muted = false, ducked = false;
 let track = null, wantTrack = null, wantRate = 1;
 let clapBuf = null;
-try { muted = localStorage.getItem('pingpow.muted') === '1'; } catch { /* sem storage */ }
+const vol = { music: AUDIO.defaultMusic, sfx: AUDIO.defaultSfx }; // controles da jogadora (0 a 1)
+try {
+  muted = localStorage.getItem('pingpow.muted') === '1';
+  for (const k of ['music', 'sfx']) { const v = parseFloat(localStorage.getItem('pingpow.vol.' + k)); if (v >= 0 && v <= 1) vol[k] = v; }
+} catch { /* sem storage */ }
+// Curva quadrática: o controle "anda" de forma mais natural pro ouvido.
+const busGain = (k) => AUDIO[k] * vol[k] * vol[k] * (k === 'music' && ducked ? 0.3 : 1);
 
 // Os bytes começam a baixar já; a decodificação espera o áudio ser liberado.
 const raw = {};
@@ -48,10 +55,10 @@ export function unlock() {
       master.gain.value = muted ? 0 : 1;
       master.connect(ac.destination);
       sfxBus = ac.createGain();
-      sfxBus.gain.value = AUDIO.sfx;
+      sfxBus.gain.value = busGain('sfx');
       sfxBus.connect(master);
       musicBus = ac.createGain();
-      musicBus.gain.value = AUDIO.music;
+      musicBus.gain.value = busGain('music');
       musicBus.connect(master);
       for (const k of Object.keys(FILES)) {
         raw[k].then((ab) => ab && decode(ab)).then((b) => {
@@ -117,8 +124,18 @@ export function musicRate(r) {
   if (track) track.src.playbackRate.setTargetAtTime(r, ac.currentTime, 0.25);
 }
 
-export function duck(on) {
-  if (musicBus) musicBus.gain.setTargetAtTime(AUDIO.music * (on ? 0.3 : 1), ac.currentTime, 0.1);
+function applyBus(k) {
+  const bus = k === 'music' ? musicBus : sfxBus;
+  if (bus) bus.gain.setTargetAtTime(busGain(k), ac.currentTime, 0.05);
+}
+
+export function duck(on) { ducked = on; applyBus('music'); }
+
+export const getVolume = (k) => vol[k];
+export function setVolume(k, v) {
+  vol[k] = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem('pingpow.vol.' + k, String(vol[k])); } catch { /* sem storage */ }
+  applyBus(k);
 }
 
 // ---------- Efeitos ----------
@@ -206,26 +223,26 @@ const anyHit = () => 'hit' + (1 + Math.floor(Math.random() * 3));
 export const sfx = {
   hit(power, speed = BALL.startSpeed) {
     const rate = 0.92 + speedK(speed) * 0.3 + (Math.random() - 0.5) * 0.06;
-    if (!play(anyHit(), { rate, vol: 0.95 })) tone(660, 0.06, { vol: 0.2 });
-    if (power === 'smash') { if (!play('smash')) tone(220, 0.25, { to: 60, type: 'sawtooth', vol: 0.3 }); whoosh(0.35, 0.5, 300, 2600); }
+    if (!play(anyHit(), { rate, vol: MIX.hit })) tone(660, 0.06, { vol: 0.2 });
+    if (power === 'smash') { if (!play('smash', { vol: MIX.smash })) tone(220, 0.25, { to: 60, type: 'sawtooth', vol: 0.3 }); whoosh(0.35, 0.5, 300, 2600); }
     else if (power === 'curve') tone(500, 0.35, { to: 1500, type: 'sine', vol: 0.18 });
   },
-  bounce() { if (!play('hit2', { rate: 1.75 + Math.random() * 0.1, vol: 0.3 })) tone(1400, 0.03, { type: 'triangle', vol: 0.08 }); },
-  wall() { if (!play('wall', { rate: 0.95 + Math.random() * 0.15, vol: 0.5 })) tone(330, 0.05, { type: 'triangle', vol: 0.2 }); },
-  serve() { if (!play('hit3', { rate: 1.25, vol: 0.6 })) tone(880, 0.05, { type: 'triangle', vol: 0.15 }); },
+  bounce() { if (!play('hit2', { rate: 1.75 + Math.random() * 0.1, vol: MIX.bounce })) tone(1400, 0.03, { type: 'triangle', vol: 0.08 }); },
+  wall() { if (!play('wall', { rate: 0.95 + Math.random() * 0.15, vol: MIX.wall })) tone(330, 0.05, { type: 'triangle', vol: 0.2 }); },
+  serve() { if (!play('hit3', { rate: 1.25, vol: MIX.serve })) tone(880, 0.05, { type: 'triangle', vol: 0.15 }); },
   point(good, crowd) {
-    if (!play(good ? 'point' : 'pointBad', { vol: 0.75 })) { tone(523, 0.1, { vol: 0.2 }); tone(good ? 784 : 392, 0.18, { vol: 0.2, delay: 0.1 }); }
-    if (crowd) applause(0.35, 1.3);
+    if (!play(good ? 'point' : 'pointBad', { vol: MIX.point })) { tone(523, 0.1, { vol: 0.08 }); tone(good ? 784 : 392, 0.18, { vol: 0.08, delay: 0.1 }); }
+    if (crowd) applause(MIX.applause, 1.3);
   },
-  matchPoint() { if (!play('matchPoint', { vol: 0.8 })) tone(440, 0.4, { type: 'square', vol: 0.15 }); },
-  ready() { if (!play('ready', { vol: 0.6 })) { tone(784, 0.08, { type: 'triangle' }); tone(1175, 0.15, { type: 'triangle', delay: 0.08 }); } },
-  rally() { if (!play('ready', { rate: 1.3, vol: 0.45 })) tone(1046, 0.12, { type: 'triangle', vol: 0.15 }); },
+  matchPoint() { if (!play('matchPoint', { vol: MIX.matchPoint })) tone(440, 0.4, { type: 'square', vol: 0.06 }); },
+  ready() { if (!play('ready', { vol: MIX.ready })) { tone(784, 0.08, { type: 'triangle', vol: 0.1 }); tone(1175, 0.15, { type: 'triangle', vol: 0.1, delay: 0.08 }); } },
+  rally() { if (!play('ready', { rate: 1.3, vol: MIX.rally })) tone(1046, 0.12, { type: 'triangle', vol: 0.15 }); },
   power(kind) {
-    if (kind === 'freeze') { if (!play('freeze', { vol: 0.9 })) tone(1800, 0.4, { to: 600, type: 'sine', vol: 0.3 }); play('ice', { delay: 0.12, vol: 0.6, rate: 1.2 }); }
-    else if (kind === 'smash') { if (!play('fire', { vol: 0.8 })) tone(150, 0.3, { to: 600, type: 'sawtooth', vol: 0.25 }); whoosh(0.45, 0.35, 200, 1800); }
-    else if (!play('curve', { vol: 0.8 })) tone(400, 0.3, { to: 900, type: 'sine', vol: 0.3 });
+    if (kind === 'freeze') { if (!play('freeze', { vol: MIX.freeze })) tone(1800, 0.4, { to: 600, type: 'sine', vol: 0.3 }); play('ice', { delay: 0.12, vol: MIX.ice, rate: 1.2 }); }
+    else if (kind === 'smash') { if (!play('fire', { vol: MIX.fire })) tone(150, 0.3, { to: 600, type: 'sawtooth', vol: 0.25 }); whoosh(0.45, 0.35, 200, 1800); }
+    else if (!play('curve', { vol: MIX.curve })) tone(400, 0.3, { to: 900, type: 'sine', vol: 0.3 });
   },
-  final() { applause(0.5, 2.3); },
-  lose() { if (!play('lose', { vol: 0.8 })) [523, 494, 466, 440].forEach((f, i) => tone(f, 0.3, { vol: 0.2, delay: i * 0.3 })); },
-  click() { play('click', { vol: 0.45 }); },
+  final() { applause(MIX.applauseFinal, 2.3); },
+  lose() { if (!play('lose', { vol: MIX.lose })) [523, 494, 466, 440].forEach((f, i) => tone(f, 0.3, { vol: 0.08, delay: i * 0.3 })); },
+  click() { play('click', { vol: MIX.click }); },
 };

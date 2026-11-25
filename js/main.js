@@ -257,6 +257,10 @@ ui.initUI({
   rematch: () => startMatch(game.m.mode, game.m.level),
   power: usePower,
   mute: audio.toggleMute,
+  getVolume: audio.getVolume,
+  setVolume: audio.setVolume,
+  preview: (kind) => { if (kind === 'sfx') sfx.hit(); },
+  soundPanel: (open) => audio.duck(!open && state === 'PAUSED'), // sem abafar a música enquanto ajusta
   click: sfx.click,
 });
 ui.setMuteIcon(audio.isMuted());

@@ -53,14 +53,14 @@
     <button class="chip" data-level="hard" data-text="hard"></button>
   </div>
   <button class="big" id="btn-online" disabled><span data-text="online"></span> <small data-text="soon"></small></button>
-  <footer><button class="icon btn-mute" aria-label="Som">🔊</button><span id="version"></span></footer>
+  <footer><button class="icon btn-sound" aria-label="Som">🔊</button><span id="version"></span></footer>
 </section>
 
 <section class="screen dim" id="screen-pause" hidden>
   <h2 data-text="paused"></h2>
   <button class="big" id="btn-resume" data-text="resume"></button>
   <button class="big" id="btn-pause-menu" data-text="menu"></button>
-  <button class="icon btn-mute" aria-label="Som">🔊</button>
+  <button class="icon btn-sound" aria-label="Som">🔊</button>
 </section>
 
 <section class="screen dim" id="screen-over" hidden>
@@ -69,6 +69,16 @@
   <p class="label" id="over-score"></p>
   <button class="big" id="btn-rematch" data-text="rematch"></button>
   <button class="big" id="btn-over-menu" data-text="menu"></button>
+</section>
+
+<section class="screen dim" id="screen-sound" hidden>
+  <h2 data-text="sound"></h2>
+  <div class="vol" data-kind="music"><span class="lbl" data-text="music"></span><span class="val"></span>
+    <div class="track" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100"><i></i><b></b></div></div>
+  <div class="vol" data-kind="sfx"><span class="lbl" data-text="sfx"></span><span class="val"></span>
+    <div class="track" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100"><i></i><b></b></div></div>
+  <button class="big" id="btn-mute"></button>
+  <button class="big" id="btn-sound-ok" data-text="done"></button>
 </section>
 
 <div id="rotate" hidden><p data-text="rotate"></p></div>
