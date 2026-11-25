@@ -16,7 +16,9 @@ export const CONFIG = {
     serveDelay: 1, serveMaxDeg: 20, pointPause: 0.8,
     finalPause: 1.8, // pausa depois do ponto que fecha a partida (comemoração)
   },
-  BALL:   { radius: 4, startSpeed: 170, speedUp: 1.05, maxSpeed: 420, minVyFrac: 0.35 }, // px lógicos/s
+  // px lógicos/s. Saque cruza a mesa em ~1,2 s (com 170 eram ~2 s: "bola lenta" na validação).
+  // Teto do smash = 600 × 1,3 = 780 → 3,25 px por passo de 1/240 s, menos que o raio: não atravessa a raquete.
+  BALL:   { radius: 4, startSpeed: 300, speedUp: 1.05, maxSpeed: 600, minVyFrac: 0.35 },
   PADDLE: { w: 40, h: 6, maxSpeed: 520, maxBounceDeg: 60, spin: 0.15,
             gap: 20,        // distância da raquete até a ponta da mesa
             outMargin: 26 }, // quanto a bola passa da raquete até virar ponto
@@ -30,14 +32,14 @@ export const CONFIG = {
     hard:   { speed: 0.95, errorPx: 4,  delay: 0.08, aim: 0.9,  aimMax: 0.8,  miss: 0.025 },
     powerDelay: [0.5, 2],  // s até usar o poder recebido
     returnSpeed: 0.35,     // fração da velocidade ao voltar pro centro
-    errorSpeedExp: 1.7,    // erro × (velocidade/inicial)^exp — bola rápida engana mais
+    errorSpeedExp: 2.2,    // erro × (velocidade/inicial)^exp — bola rápida engana mais (2,2 mantém o erro na velocidade máxima de antes)
     rubber: 0.12,          // erro ±12% por ponto de vantagem (até 3): partidas mais disputadas
     demoLevel: 'easy',     // CPU × CPU no fundo do menu
   },
   FX: {
     hitStop: 0.035, smashStop: 0.11, pointStop: 0.07, // pausas de impacto (s)
     shakeHit: 1.2, shakeSmash: 7, shakePoint: 4, shakeFinal: 9, // tremor (px lógicos)
-    slowMo: 0.3, slowZoom: 1.3, // câmera lenta + zoom no ponto que fecha a partida
+    slowMo: 0.2, slowZoom: 1.3, // câmera lenta + zoom no ponto que fecha a partida
     bounceAt: 0.68,             // fração do caminho em que a bola quica na mesa
     arc: [13, 4],               // altura do arco da bola: lenta → rápida
     rallyEvery: 10,             // aviso a cada N rebatidas seguidas
