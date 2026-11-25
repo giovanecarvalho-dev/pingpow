@@ -13,6 +13,7 @@ let canvas, ctx;
 const view = { scale: 1, ox: 0, oy: 0, dpr: 1 };
 const trail = [];
 let time = 0;
+let dimA = 0, dimGrad = null; // escurecido da tela de vitória
 
 export function initRender(c) {
   canvas = c;
@@ -33,6 +34,12 @@ export function resize() {
   view.scale = Math.min(vw / W, vh / H);
   view.ox = (vw - W * view.scale) / 2;
   view.oy = (vh - H * view.scale) / 2;
+  // Mesmo gradiente que era o fundo CSS da vitória (circle at 50% 38%, farthest-corner).
+  const cw = canvas.width, ch = canvas.height, cx = cw / 2, cy = ch * 0.38;
+  dimGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(cx, Math.max(cy, ch - cy)));
+  dimGrad.addColorStop(0, C.overDim[0]);
+  dimGrad.addColorStop(0.7, C.overDim[1]);
+  dimGrad.addColorStop(1, C.overDim[1]);
 }
 
 // Coordenadas da tela (CSS px) -> coordenadas lógicas, limitadas ao mundo.
@@ -282,9 +289,10 @@ function moodOf(m, s) {
   return 'play';
 }
 
-export function draw(m, dt) {
+export function draw(m, dt, over = false) {
   time += dt;
   fx.update(dt);
+  dimA = over ? Math.min(1, dimA + dt / CONFIG.FX.overFade) : 0;
   g.drawImage(bg, 0, 0);
   if (m) {
     const [p1, p2] = m.paddles;
@@ -295,7 +303,7 @@ export function draw(m, dt) {
     drawPaddle(p1, m.keys[0]);
     if (CONFIG.DEBUG) drawHitboxes(m);
   }
-  fx.draw(g);
+  fx.draw(g, !dimA);
   fx.drawFlash(g);
   // Tela: fundo nas faixas + buffer escalado (com tremor e zoom da câmera).
   const cam = fx.camera();
@@ -306,6 +314,17 @@ export function draw(m, dt) {
   const s = view.scale * view.dpr;
   const sw = W / cam.zoom, sh = H / cam.zoom;
   const sx = clamp(cam.fx - sw / 2, 0, W - sw), sy = clamp(cam.fy - sh / 2, 0, H - sh);
-  ctx.drawImage(buf, sx, sy, sw, sh,
+  const blit = () => ctx.drawImage(buf, sx, sy, sw, sh,
     Math.round(view.ox * view.dpr + cam.dx * s), Math.round(view.oy * view.dpr + cam.dy * s), Math.round(W * s), Math.round(H * s));
+  blit();
+  // Vitória: escurecido aqui (e não no CSS) pro confete cair por cima dele.
+  if (dimA) {
+    ctx.globalAlpha = dimA;
+    ctx.fillStyle = dimGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    g.clearRect(0, 0, W, H);
+    fx.drawConfetti(g);
+    blit();
+  }
 }

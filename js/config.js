@@ -2,8 +2,8 @@
 const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 
 export const CONFIG = {
-  VERSION: '0.1.0',
-  VERSION_LABEL: 'v0.1 protótipo',
+  VERSION: '0.2.0',
+  VERSION_LABEL: 'v0.2 protótipo',
   TITLE: 'PING POW!', // nome provisório, a cliente pode trocar
   DEBUG,
   PLAYERS: {
@@ -44,6 +44,7 @@ export const CONFIG = {
     arc: [13, 4],               // altura do arco da bola: lenta → rápida
     rallyEvery: 10,             // aviso a cada N rebatidas seguidas
     confetti: 160,
+    overFade: 0.3,              // s pro escurecido da tela de vitória aparecer
   },
   AUDIO: {
     music: 0.28, sfx: 1,              // volume de cada trilha em 100% nos controles
@@ -65,6 +66,7 @@ export const CONFIG = {
     freeze: '#9fe3ff', fire: '#ff8a1f', fire2: '#ffd23f', fire3: '#ff3d2e', curve: '#c08bff', curve2: '#ff7ad9',
     skin: '#f2c6a0', handle: '#b07040',
     confetti: ['#ff5d8f', '#4cc9f0', '#ffd23f', '#7cf29a', '#c08bff', '#ffffff'],
+    overDim: ['rgba(20,16,45,.3)', 'rgba(20,16,45,.86)'], // escurecido da vitória: centro → borda
   },
   TEXTS: {
     tapToPlay: 'Toque para jogar',

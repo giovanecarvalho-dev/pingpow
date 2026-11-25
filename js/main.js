@@ -226,7 +226,7 @@ function frame(now) {
     while (acc >= PHYS.step) { stepGame(demo, PHYS.step, false); acc -= PHYS.step; }
   } else acc = 0;
   const shown = state === 'MENU' || state === 'BOOT' ? demo : game;
-  draw(shown ? shown.m : null, dt);
+  draw(shown ? shown.m : null, dt, state === 'GAME_OVER');
   if (CONFIG.DEBUG) {
     fpsT += dt; fpsN++;
     if (fpsT >= 0.5) { ui.setFps(Math.round(fpsN / fpsT)); fpsT = 0; fpsN = 0; }

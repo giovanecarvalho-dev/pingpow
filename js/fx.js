@@ -75,21 +75,29 @@ function circle(g, x, y, r) {
   }
 }
 
-export function draw(g) {
+function drawPart(g, p) {
+  const k = p.t / p.life;
+  let w = p.shrink ? Math.max(1, Math.round(p.size * (1 - k) + 0.4)) : p.size, h = w;
+  if (p.conf != null) { w = Math.abs(Math.sin(p.conf)) > 0.5 ? 3 : 1; h = 2; }
+  g.globalAlpha = p.conf != null ? 1 : k > 0.7 ? 0.5 : 1; // some em "degrau", estilo pixel
+  g.fillStyle = p.color;
+  g.fillRect(Math.round(p.x - w / 2), Math.round(p.y - h / 2), w, h);
+}
+
+// Na tela de vitória o confete é desenhado à parte, por cima do escurecido.
+export function drawConfetti(g) {
+  for (const p of parts) if (p.conf != null) drawPart(g, p);
+  g.globalAlpha = 1;
+}
+
+export function draw(g, withConfetti = true) {
   for (const r of rings) {
     const k = r.t / r.life;
     g.globalAlpha = 1 - k;
     g.fillStyle = r.color;
     circle(g, r.x, r.y, 2 + r.r * Math.sqrt(k));
   }
-  for (const p of parts) {
-    const k = p.t / p.life;
-    let w = p.shrink ? Math.max(1, Math.round(p.size * (1 - k) + 0.4)) : p.size, h = w;
-    if (p.conf != null) { w = Math.abs(Math.sin(p.conf)) > 0.5 ? 3 : 1; h = 2; }
-    g.globalAlpha = p.conf != null ? 1 : k > 0.7 ? 0.5 : 1; // some em "degrau", estilo pixel
-    g.fillStyle = p.color;
-    g.fillRect(Math.round(p.x - w / 2), Math.round(p.y - h / 2), w, h);
-  }
+  for (const p of parts) if (withConfetti || p.conf == null) drawPart(g, p);
   g.globalAlpha = 1;
   for (const t of texts) {
     const k = t.t / t.life;
